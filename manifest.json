@@ -1,0 +1,18 @@
+{
+  "name": "寰宇经纬 · 太平寰宇记",
+  "short_name": "寰宇经纬",
+  "description": "宋·乐史《太平寰宇记》数字人文站——十三道州县点织舆图、分道而读、全书检索",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#efe6cf",
+  "theme_color": "#2f5d70",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%232f5d70'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6efdc' font-family='serif'%3E寰%3C/text%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

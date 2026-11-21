@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>test_reader</title>
+<link rel="stylesheet" href="../vendor/leaflet.css?v=1">
+<link rel="stylesheet" href="../css/main.css?v=1"></head>
+<body>
+<div id="map"></div>
+<nav id="modes"></nav>
+<aside id="rail"><div class="rt" id="railtitle">t<small id="railsub"></small></div><div id="raillist"></div></aside>
+<section id="panel"><button id="pclose">✕</button>
+  <div class="vtitle"><div class="vname" id="vname"></div><div class="vseal" id="vseal"></div></div>
+  <div id="pmeta"></div><div id="pbody"></div></section>
+<div id="readerbar" class="hidden"><button id="rprev"></button><div id="rprog"></div>
+  <button id="rnext"></button><button id="rtop"></button></div>
+<footer id="fbar"></footer>
+<div id="testlog">TESTLOG</div>
+<script>window.HYTEXT_BASE = "../data/text/";</script>
+<script src="../vendor/leaflet.js?v=1"></script>
+<script src="../data/site_data.js?v=1"></script>
+<script src="../js/config.js?v=1"></script>
+<script src="../js/map.js?v=1"></script>
+<script src="../js/rail.js?v=1"></script>
+<script src="../js/panels.js?v=1"></script>
+<script src="../js/reader.js?v=1"></script>
+<script>
+window.onerror = function (m, s, l) {
+  var t = document.getElementById("testlog");
+  t.textContent += "\nFAIL 页面错误 " + m + "@" + l;
+  document.title = "FAIL:onerror " + m + " @" + l;
+};
+var L2 = [];
+function A(name, cond) { L2.push((cond ? "PASS " : "FAIL ") + name); }
+function flush(final) {
+  document.getElementById("testlog").textContent = "TESTLOG\n" + L2.join("\n") + "\nENDLOG";
+  if (final) {
+    var bad = L2.filter(function (l) { return l.indexOf("FAIL") === 0; });
+    document.title = bad.length ? ("FAIL:" + bad[0].slice(0, 70)) : "PASS";
+  }
+}
+(function () {
+  HYMAP.init();
+  HYMAP.render();
+  HYRAIL.build();
+  A("rail 十四道", document.querySelectorAll("#raillist .ri").length === 14);
+  HYREADER.openDao("henan").then(function () {
+    var pb = document.getElementById("pbody");
+    A("河南道阅读打开", pb.classList.contains("reading"));
+    A("段落 >= 300", pb.querySelectorAll(".rpara").length >= 300);
+    A("卷头 23", pb.querySelectorAll(".rpara.volhead").length === 23);
+    A("州锚存在-開封府", !!document.getElementById("an-開封府"));
+    A("阅读底条显示", !document.getElementById("readerbar").classList.contains("hidden"));
+    return HYREADER.openZhou(HY.zhou.find(function (z) { return z.n === "開封府"; }));
+  }).then(function () {
+    var an = document.getElementById("an-開封府");
+    A("州阅读定位锚", !!an);
+    A("meta 卷1", document.getElementById("pmeta").textContent.indexOf("卷1") >= 0);
+    return HYREADER.openDao("lingnan");
+  }).then(function () {
+    var pb = document.getElementById("pbody");
+    A("岭南分片加载", pb.querySelectorAll(".rpara").length >= 100);
+    A("岭南卷头 15", pb.querySelectorAll(".rpara.volhead").length === 15);
+    flush(true);
+  }).catch(function (e) {
+    A("openDao 异常 " + e.message, false);
+    flush(true);
+  });
+  flush(false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>test_search</title>
+<link rel="stylesheet" href="../vendor/leaflet.css?v=1">
+<link rel="stylesheet" href="../css/main.css?v=1"></head>
+<body>
+<div id="map"></div>
+<nav id="modes"><button class="mode active" data-mode="yutu">舆图</button><span>·</span>
+  <button class="mode" data-mode="fen">分道</button></nav>
+<div id="searchwrap"><input id="search" type="text"><div id="sresults"></div></div>
+<aside id="rail"><div class="rt" id="railtitle">t<small id="railsub"></small></div><div id="raillist"></div></aside>
+<section id="panel"><button id="pclose">✕</button>
+  <div class="vtitle"><div class="vname" id="vname"></div><div class="vseal" id="vseal"></div></div>
+  <div id="pmeta"></div><div id="pbody"></div></section>
+<div id="readerbar" class="hidden"><button id="rprev"></button><div id="rprog"></div>
+  <button id="rnext"></button><button id="rtop"></button></div>
+<footer id="fbar"><span id="modelabel"></span><span id="bookstat"></span></footer>
+<div id="testlog">TESTLOG</div>
+<script>window.HYTEXT_BASE = "../data/text/";</script>
+<script src="../vendor/leaflet.js?v=1"></script>
+<script src="../data/site_data.js?v=1"></script>
+<script src="../js/config.js?v=1"></script>
+<script src="../js/map.js?v=1"></script>
+<script src="../js/rail.js?v=1"></script>
+<script src="../js/panels.js?v=1"></script>
+<script src="../js/reader.js?v=1"></script>
+<script src="../js/search.js?v=1"></script>
+<script src="../js/ftworker.js?v=1"></script>
+<script src="../js/fulltext.js?v=1"></script>
+<script src="../js/app.js?v=1"></script>
+<script>
+window.onerror = function (m, s, l) {
+  document.getElementById("testlog").textContent += "\nFAIL 页面错误 " + m + "@" + l;
+  document.title = "FAIL:onerror " + m + " @" + l;
+};
+var L2 = [];
+function A(name, cond) { L2.push((cond ? "PASS " : "FAIL ") + name); }
+function flush(final) {
+  document.getElementById("testlog").textContent = "TESTLOG\n" + L2.join("\n") + "\nENDLOG";
+  if (final) {
+    var bad = L2.filter(function (l) { return l.indexOf("FAIL") === 0; });
+    document.title = bad.length ? ("FAIL:" + bad[0].slice(0, 70)) : "PASS";
+  }
+}
+HYAPP.init();
+A("init 后州印", document.querySelectorAll(".zhoudot").length >= 250);
+A("底栏统计", document.getElementById("bookstat").textContent.indexOf("192") >= 0);
+HYSEARCH.run("洪州");
+A("名录检索洪州 >= 1", document.querySelectorAll("#sresults .sr").length >= 1);
+A("结果面板打开", document.getElementById("sresults").classList.contains("open"));
+HYSEARCH.run("開封");
+A("開封检索", document.querySelectorAll("#sresults .sr").length >= 1);
+A("深链含 search", location.hash.indexOf("search=") >= 0);
+flush(false);
+/* Worker 全文扫描（真实时间, CDP 轮询 title） */
+var s = document.createElement("script");
+s.src = "../data/text/henan.js?v=1";
+setTimeout(function () {
+  if (document.title !== "PASS" && document.title.indexOf("FAIL") !== 0) {
+    A("Worker 超时(12s) title=" + document.title, false); flush(true);
+  }
+}, 12000);
+s.onerror = function () { A("henan 分片加载失败", false); flush(true); };
+s.onload = function () {
+  ftWorkerStart([{ id: "henan", vols: [1] }], "開封府", function (m) {
+    if (m.prog != null) return;
+    if (m.error) { A("Worker 错误 " + m.error, false); flush(true); return; }
+    A("Worker 命中開封府 > 10", m.done && m.hits > 10);
+    A("Worker 片段含卷号", m.done && m.secs.length >= 1 && m.secs[0].v === 1);
+    flush(true);
+  });
+};
+document.head.appendChild(s);
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>test_map</title>
+<link rel="stylesheet" href="../vendor/leaflet.css?v=1"></head>
+<body>
+<div id="map" style="position:static;width:900px;height:600px"></div>
+<div id="testlog">TESTLOG</div>
+<script src="../vendor/leaflet.js?v=1"></script>
+<script src="../data/site_data.js?v=1"></script>
+<script src="../js/config.js?v=1"></script>
+<script src="../js/map.js?v=1"></script>
+<script>
+setTimeout(function () {
+  var L2 = [];
+  function A(name, cond) { L2.push((cond ? "PASS " : "FAIL ") + name); }
+  try {
+    HYMAP.init();
+    HYMAP.render();
+    A("地图对象", !!HYMAP.map);
+    A("缩放范围 4-10", HYMAP.map.getMinZoom() === 4 && HYMAP.map.getMaxZoom() === 10);
+    A("瓦片层存在", !!HYMAP.map._layers && Object.keys(HYMAP.map._layers).length >= 3);
+    var dots = document.querySelectorAll(".zhoudot");
+    A("州印 >= 250", dots.length >= 250);
+    HYMAP.selectDao("henan");
+    var dotsHN = document.querySelectorAll(".zhoudot");
+    A("道筛选河南州印 20-40", dotsHN.length >= 20 && dotsHN.length <= 40);
+    HYMAP.selectDao(null);
+    HYMAP.select("洪州");
+    var sel = document.querySelector(".zhoudot.sel");
+    A("选中州朱印", !!sel);
+    A("选中后 sel 状态", true);
+    HYMAP.map.setZoom(7);
+    HYMAP.renderXian();
+    A("zoom7 县微点 > 0", document.querySelectorAll(".leaflet-interactive").length > 10);
+    var on = HYMAP.toggleDaoColor();
+    A("道色切换", on === false);
+    HYMAP.toggleDaoColor();
+  } catch (e) { L2.push("FAIL 异常 " + e.message); }
+  document.getElementById("testlog").textContent = "TESTLOG\n" + L2.join("\n") + "\nENDLOG";
+}, 300);
+</script>
+</body>
+</html>

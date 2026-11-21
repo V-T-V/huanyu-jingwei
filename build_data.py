@@ -183,7 +183,8 @@ def county_list(paras, i: int):
             tk = re.sub(r"(?:自.{0,5})?割到$|(?:自.{0,5})?割出$|新置$|入.{0,4}$", "", tk)
             if tk and _like_county(tk):
                 got.append(tk)
-        if got and len(q) <= 64 and sum(len(g) for g in got) >= len(q.replace("　", "")) * .5:
+        q_core = re.sub(r"\(.*?\)", "", q.replace("　", ""))
+        if got and len(q) <= 240 and sum(len(g) for g in got) >= len(q_core) * .5:
             names.extend(got)
             j += 1
             continue
@@ -439,6 +440,14 @@ def main():
     n_xc = sum(1 for z in out_zhou for x in z["xian"] if x.get("c"))
     n_tri = sum(1 for z in out_zhou for x in z["xian"] if x.get("src") == "tri")
 
+    total_chars = 0
+    for v in vols:
+        if v["lost"]:
+            continue
+        ps = load_paras(v["vol"])
+        if ps:
+            total_chars += len(re.sub(r"\s", "", "".join(ps)))
+
     report = {
         "vols_total": 200,
         "vols_got": len(got),
@@ -447,6 +456,7 @@ def main():
         "zhou_count": len(order),
         "xian_count": sum(len(z["xian_list"]) for z in merged.values()),
         "zhou_coord": n_coord, "coord_sure": n_sure, "coord_derived": n_derived,
+        "total_chars": total_chars,
         "xian_coord": n_xc, "xian_tri": n_tri,
     }
     for v in got:

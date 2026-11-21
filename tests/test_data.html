@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>test_data</title></head>
+<body>
+<div id="testlog">TESTLOG</div>
+<script src="../data/site_data.js?v=1"></script>
+<script src="../js/config.js?v=1"></script>
+<script>
+(function () {
+  var L = [];
+  function A(name, cond) { L.push((cond ? "PASS " : "FAIL ") + name); }
+  A("HY 书名", HY.book === "太平寰宇記");
+  A("实卷 192", HY.stats.vols_got === 192);
+  A("阙卷 8 = [4,113-119]", JSON.stringify(HY.lost_vols) === JSON.stringify([4,113,114,115,116,117,118,119]));
+  A("道数 14(十三道+四夷)", HY.daos.length === 14);
+  A("府州 >= 350", HY.zhou.length >= 350);
+  A("府州定位 >= 250", HY.stats.zhou_coord >= 250);
+  A("确坐标 >= 190", HY.stats.coord_sure >= 190);
+  A("县 >= 1200", HY.stats.xian_count >= 1200);
+  A("县上图 >= 600", HY.stats.xian_coord >= 600);
+  A("全文 >= 80 万字", HY.stats.total_chars >= 800000);
+  var henan = HY.daos.find(function (d) { return d.name === "河南道"; });
+  A("河南道 id=henan", henan && henan.id === "henan");
+  A("河南道卷起 1", henan && henan.vols[0] === 1);
+  var kf = HY.zhou.find(function (z) { return z.n === "開封府"; });
+  A("開封府存在", !!kf);
+  A("開封府坐标", kf && kf.c && Math.abs(kf.c[0] - 34.80) < 0.5 && Math.abs(kf.c[1] - 114.31) < 0.5);
+  A("開封府今理开封浚仪", kf && kf.jl && kf.jl.indexOf("開封") === 0);
+  A("開封府属县 >= 15", kf && kf.xian.length >= 15);
+  A("坐标 src=derived", kf && kf.src === "derived");
+  var gl = HY.zhou.find(function (z) { return z.n === "廣州"; });
+  A("廣州存在且定位", gl && gl.c && gl.c[0] < 24 && gl.c[1] < 114);
+  var tri = 0, fu = 0;
+  HY.zhou.forEach(function (z) { z.xian.forEach(function (x) {
+    if (x.src === "tri") tri++; if (x.src === "fu") fu++; }); });
+  A("三角化县 >= 400", tri >= 400);
+  A("附郭县 >= 140", fu >= 140);
+  A("stats.xian_tri 与遍历一致", tri === HY.stats.xian_tri);
+  A("岭南道存在", HY.daos.some(function (d) { return d.name === "嶺南道"; }));
+  A("四夷卷存在(29卷)", HY.daos.some(function (d) { return d.name === "四夷" && d.vols.length === 29; }));
+  A("道色 14 项", Object.keys(DAOCOLORS).length >= 14);
+  A("每个州有道名", HY.zhou.every(function (z) { return z.dao; }));
+  var noC = HY.zhou.filter(function (z) { return !z.c; }).length;
+  A("未定位州如实计数 > 0", noC === HY.stats.zhou_count - HY.stats.zhou_coord);
+  document.getElementById("testlog").textContent = "TESTLOG\n" + L.join("\n") + "\nENDLOG";
+})();
+</script>
+</body>
+</html>

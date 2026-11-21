@@ -60,6 +60,7 @@ def main():
     for dao, vols in by_dao.items():
         did = dao_ids[dao]
         js = ("/* 《太平寰宇記》全文分片 · build_text.py 生成 · 懶加載 */\n"
+              "window.HYTEXT=window.HYTEXT||{};"
               "HYTEXT[%s]=%s;\n" % (json.dumps(did), json.dumps(vols, ensure_ascii=False, separators=(",", ":"))))
         with open(os.path.join(TEXTDIR, did + ".js"), "w", encoding="utf-8") as f:
             f.write(js)
