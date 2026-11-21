@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>寰宇经纬 · 太平寰宇记二百卷全图</title>
+<meta name="description" content="宋·乐史《太平寰宇记》数字人文站——十三道州县点织舆图、分道而读、全文检索、县治三角化。文渊阁四库全书本。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%232f5d70'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6efdc' font-family='KaiTi,serif'%3E寰%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/leaflet.css?v=1">
+<link rel="stylesheet" href="css/main.css?v=1">
+</head>
+<body class="m-yutu nopanel">
+
+<div id="map"></div>
+<div class="paper-wash"></div>
+
+<!-- 顶列 · 模式与检索 -->
+<nav id="modes">
+  <button class="mode active" data-mode="yutu">舆图</button><span>·</span>
+  <button class="mode" data-mode="fen">分道</button><span>·</span>
+  <button class="mode" data-mode="about">关于</button>
+</nav>
+<div id="searchwrap">
+  <input id="search" type="text" placeholder="检十三道州县——州名·县名·道名，回车全文检索，如 洪州 / 汴州 / 開封" autocomplete="off">
+  <div id="sresults"></div>
+</div>
+
+<!-- 左列 · 十三道纲目 -->
+<aside id="rail">
+  <div class="rt" id="railtitle">十三道纲目<small id="railsub">今存其百九十三卷</small></div>
+  <div id="raillist"></div>
+</aside>
+
+<!-- 右幅 · 面板 -->
+<section id="panel">
+  <button id="pclose" title="收起">✕</button>
+  <div class="vtitle"><div class="vname" id="vname"></div><div class="vseal" id="vseal">寰宇</div></div>
+  <div id="pmeta"></div>
+  <div id="pbody"></div>
+</section>
+
+<div id="readerbar" class="hidden">
+  <button id="rprev" title="上一州">◀ 州</button>
+  <div id="rprog">分道而读</div>
+  <button id="rnext" title="下一州">州 ▶</button>
+  <button id="rtop" title="回道名录">☰ 纲目</button>
+</div>
+
+<footer id="fbar">
+  <button class="ftool" id="daotoggle" title="道着色开关：分色显示十三道州点">◈ 道色</button>
+  <button class="ftool" id="wanderlink" title="随机一州游历">⚑ 漫州</button>
+  <button class="ftool" id="ftlink" title="全书全文检索（懒加载分片）">🔍 全文</button>
+  <button class="ftool" id="nightlink" title="夜读模式（墨色护眼）">☾ 夜读</button>
+  <span class="sep"></span><span id="modelabel">舆图</span><span class="sep"></span>
+  <span id="bookstat"></span>
+  <div class="right"><span>文本 · kanripo/ctext 四库本</span><span>底图 · Esri World Physical</span></div>
+</footer>
+
+<!-- 序幕 -->
+<div id="boot">
+  <div class="bt">
+    <div class="seal-row"><span class="bseal">寰</span><span class="bseal b2">宇</span></div>
+    <h1>寰宇经纬</h1>
+    <p class="sub">宋 · 樂史《太平寰宇記》二百卷 · 太平興國輿圖全志</p>
+    <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="quote">起自河南道，讫于四夷——十三道州县，万里如在目前。</p>
+    <button class="go">入 圖</button>
+    <p class="hint">分道而读 · 州县点织 · 原卷全文 · 全书检索</p>
+  </div>
+</div>
+
+<script src="vendor/leaflet.js?v=1" defer></script>
+<script src="data/site_data.js?v=1" defer></script>
+<script src="js/config.js?v=1" defer></script>
+<script src="js/map.js?v=1" defer></script>
+<script src="js/rail.js?v=1" defer></script>
+<script src="js/panels.js?v=1" defer></script>
+<script src="js/reader.js?v=1" defer></script>
+<script src="js/search.js?v=1" defer></script>
+<script src="js/ftworker.js?v=1" defer></script>
+<script src="js/fulltext.js?v=1" defer></script>
+<script src="js/app.js?v=1" defer></script>
+</body>
+</html>
