@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """寰宇经纬 · 研究论文排印 → docs/寰宇经纬-数字人文.pdf
    数字全部出自 docs/stats.json / data/coverage.json / data/text/manifest.json /
-   data/xref_fy.js（脚本产物，可复核）。改 ANALYSIS.md 后必须重跑本脚本（lint 哨兵联动）。"""
+   data/xref_fy.js / data/xrev_yh.js（脚本产物，可复核）。改 ANALYSIS.md 后必须重跑本脚本（lint 哨兵联动）。"""
 import json
 import os
 
@@ -24,6 +24,9 @@ MAN = json.load(open(os.path.join(ROOT, "data", "text", "manifest.json"), encodi
 _t = open(os.path.join(ROOT, "data", "xref_fy.js"), encoding="utf-8").read()
 XR = json.loads(_t[_t.find("const HYXREF = ") + len("const HYXREF = "):].rstrip().rstrip(";"))
 XS = XR["stats"]
+_t2 = open(os.path.join(ROOT, "data", "xrev_yh.js"), encoding="utf-8").read()
+XR2 = json.loads(_t2[_t2.find("const HYXREV_YH = ") + len("const HYXREV_YH = "):].rstrip().rstrip(";"))
+XS2 = XR2["stats"]
 
 pdfmetrics.registerFont(TTFont("KaiTi", r"C:\Windows\Fonts\STKAITI.TTF"))
 pdfmetrics.registerFont(TTFont("YaHei", r"C:\Windows\Fonts\msyh.ttc", subfontIndex=0))
@@ -119,7 +122,7 @@ E += [Spacer(1, 10 * mm),
       Paragraph("——基于文渊阁四库本 192 卷 818,819 字与 361 府州、1,281 属县的数字人文分析", ST["sub"]),
       Spacer(1, 8 * mm),
       Paragraph("寰宇经纬项目组", ST["sub"]),
-      Paragraph("2026 年 11 月 · 全部数字由脚本可复核（tools/build_stats.py / build_xref_fy.py / export_data.py）", ST["sub"]),
+      Paragraph("2026 年 11 月 · 全部数字由脚本可复核（tools/build_stats.py / build_xref_fy.py / build_xrev_yh.py / export_data.py）", ST["sub"]),
       Spacer(1, 5 * mm),
       HRFlowable(width="34%", thickness=.7, color=ACCENT, hAlign="CENTER"),
       Spacer(1, 5 * mm)]
@@ -249,6 +252,28 @@ E += [P("八、宋明府州互查桥（与方舆经纬对照）", "h1"),
         % (XS["matched"], XS["same"], XS["promo"], XS["rename"], XS["mzhou"],
            XS["near"], XS["none"], XS["ming_fu_hit"]))]
 
+# ── 八之二、宋唐互查桥（宋视角反向桥）──
+xd2 = XR2["by_dao"]
+xd2_rows = [[d["dao"], str(d["total"]), str(d["tong"]), str(d["yiming"]),
+             str(d["yili"]), str(d["wu"])] for d in xd2]
+E += [P("八之二、宋唐互查桥（与元和经纬对照 · 宋视角反向桥）", "h1"),
+      P("《元和郡县图志》（813）与本书相隔 164 年。元和站已以三证判 227 唐州对 360 宋条"
+        "（同名/同治异名/异隶），本站 tools/build_xrev_yh.py 读其判档（只读）反转为宋视角："),
+      tbl(["道", "宋州", "同名", "异名", "异隶", "无唐对应"],
+          xd2_rows, [.26, .13, .13, .13, .13, .22],
+          "表 8　宋视角分道计数（data/xrev_yh.js stats；tools/build_xrev_yh.py 可重算）"),
+      P("361 宋府州得唐对应 %d：同名 %d（洪州→唐洪州）、同治异名 %d（升降并注 %d 组："
+        "雍州↔京兆府、開封府↔汴州、蒲州↔河中府、遼州↔仪州、益州↔成都府、鎮州↔恒州）、"
+        "异隶 %d（名同治同而道隶不同：渝、成、濠、安、黄、蕲、信、昌）。"
+        "无唐对应 %d：宋新置军监 %d（廣濟軍、利國監等）、唐末五代新置/改并或唐志阙卷 %d、"
+        "领羁縻州占位条 %d——如实分列不冒认。唐侧 227 州中 %d 州被反向对应，与元和站判档对账一致"
+        "（彼站 song_new=162＝本站无对应 163−占位 1，口径差如注）。"
+        "站内「唐志对照」子页（#mode=duizhao&xr=yh）样例两书条目对读，↗元和深链逐条直达"
+        "（../YHJZ/#dao=<元和道id>&zhou=<唐州名>，父目录同根服务或同账号 GitHub Pages 项目页）。"
+        % (XS2["matched"], XS2["tong"], XS2["yiming"], XS2["sj"], XS2["yili"],
+           XS2["wu"], XS2["none_jun"], XS2["wu"] - XS2["none_jun"] - XS2["ph"],
+           XS2["ph"], XS2["matched"]))]
+
 # ── 九、方法与局限 ──
 E += [P("九、方法与局限", "h1"),
       P("（一）县坐标三角化为方法近似：方位取八向、里程按 1 里 = 0.55 km，精度 ±20% 量级，站点与导出逐县注明；"
@@ -263,7 +288,7 @@ E += [P("参考文献", "h1"),
       P("［2］王文楚，点校．太平寰宇记［M］．北京：中华书局，2007（以金陵书局本为底，可补四库本之阙）．", "body0"),
       P("［3］顾祖禹．读史方舆纪要［M］．贺次君，施和金，点校．北京：中华书局，2005（对照站：方舆经纬）．", "body0"),
       P("［4］李吉甫．元和郡县图志［M］．北京：中华书局，1983（体例上游）．", "body0"),
-      P("［5］寰宇经纬项目．build_data.py（解析与三角化）、build_stats.py（文本计量）、build_xref_fy.py（宋明桥）、export_data.py（古今对照导出）［CP/OL］．本站仓库．", "body0"),
+      P("［5］寰宇经纬项目．build_data.py（解析与三角化）、build_stats.py（文本计量）、build_xref_fy.py（宋明桥）、build_xrev_yh.py（宋唐桥）、export_data.py（古今对照导出）［CP/OL］．本站仓库．", "body0"),
       Spacer(1, 4 * mm),
       HRFlowable(width="100%", thickness=.5, color=BG_SURFACE),
       Paragraph("本文一切数字可由仓库脚本复现；交互验证：站内舆图 / 分道而读 / 明志对照；导出见 docs/export/。", ST["cap"])]

@@ -238,6 +238,21 @@ var HYPANEL = (() => {
   var XR_REL = { same: "同名", promo: "升府", rename: "改名", mzhou: "明属州",
                  near: "近邻存疑", none: "无对应" };
 
+  function xrSubTabs(cur) {
+    /* 对照页签双子页：宋↔明（方舆纪要）/ 宋↔唐（元和志）——并列子页而非三角混排：
+       明桥六档、唐桥四档口径不同，混排则分档徽标失义；子页各保总览-样例-全表同构 */
+    return '<div class="xrsub">' +
+      '<button class="xs2' + (cur === "fy" ? " on" : "") + '" data-xr="fy">宋 ↔ 明 · 讀史方輿紀要</button>' +
+      '<button class="xs2' + (cur === "yh" ? " on" : "") + '" data-xr="yh">宋 ↔ 唐 · 元和郡縣圖志</button>' +
+      "</div>";
+  }
+
+  function bindXrTabs() {
+    pbody.querySelectorAll(".xs2").forEach(function (b) {
+      b.onclick = function () { HYAPP.setXref(b.dataset.xr); };
+    });
+  }
+
   function xrLink(r) {
     return "../HHH/#mode=" + encodeURIComponent("舆图") + "&p=" + r.mp +
       "&fu=" + encodeURIComponent(r.mf);
@@ -265,11 +280,13 @@ var HYPANEL = (() => {
       '<span class="xrr">' + right + "</span></div>";
   }
 
-  function openXref() {
+  function openXref(sub) {
+    if (sub === "yh") { openXrevYH(); return; }
     var X = HYXREF, st = X.stats;
     vname.textContent = "明志对照 · 宋×明";
     pmeta.innerHTML = "<span>宋 361 府州 ↔ 明 193 府</span><span>三重证据匹配</span><span>HHH 只读桥接</span>";
-    var html = '<div class="p-kicker">互查橋 · 總覽</div>';
+    var html = xrSubTabs("fy");
+    html += '<div class="p-kicker">互查橋 · 總覽</div>';
     html += '<div class="kv">宋府州 <b>' + st.song_zhou + "</b> → 得對應 <b>" + st.matched +
       "</b>（同名 <b>" + st.same + "</b> · 宋州明升府 <b>" + st.promo + "</b> · 改名同城 <b>" +
       st.rename + "</b> · 明為屬州 <b>" + st.mzhou + "</b>）· 近鄰存疑 <b>" + st.near +
@@ -337,6 +354,115 @@ var HYPANEL = (() => {
         pbody.querySelectorAll(".daohead").forEach(function (h) { h.style.display = ""; });
       };
     });
+    bindXrTabs();
+    show("對照");
+  }
+
+  /* ── 唐志对照（宋×唐互查桥 · 宋视角，data/xrev_yh.js 管线产物）── */
+  var XR2_REL = { tong: "同名", yiming: "异名", yili: "异隶", wu: "无唐对应" };
+
+  function xr2Link(r) {
+    /* 元和站深链（实测其 modes.js：#dao=<id>&zhou=<名>，名需 encodeURIComponent） */
+    return "../YHJZ/#dao=" + r.tid + "&zhou=" + encodeURIComponent(r.tn);
+  }
+
+  function xr2RowHtml(r) {
+    var tag = XR2_REL[r.rel];
+    var right;
+    if (r.rel === "wu") {
+      right = '<span class="xrnone">' + r.why + "</span>";
+    } else {
+      right = '<span title="唐 · ' + r.tdao + (r.tzhen ? " · " + r.tzhen : "") +
+        (r.tnow ? " · 今" + r.tnow : "") + '">唐 ' + r.tn + "</span>" +
+        '<a class="xrjump" href="' + xr2Link(r) + '" target="_blank" rel="noopener" ' +
+        'title="↗元和经纬：' + r.tn + '">↗元和</a>';
+    }
+    var ev = "";
+    if (r.rel === "tong") ev = r.note || "名同治同";
+    else if (r.rel === "yiming") ev = "同治异名" + (r.sj ? " · 升降 " + r.sj : "");
+    else if (r.rel === "yili") ev = "名同治同 · 唐隶" + r.tdao + " 宋志列" + r.dao;
+    return '<div class="xrrow" data-z="' + r.z + '" data-rel="' + r.rel + '">' +
+      '<span class="xrz" title="' + (r.now ? "今" + r.now : "未定位") + '">' + r.z + "</span>" +
+      '<span class="xrtag t-' + r.rel + '">' + tag + "</span>" +
+      '<span class="xrev" title="' + (r.note || r.why || "") + '">' + ev + "</span>" +
+      '<span class="xrr">' + right + "</span></div>";
+  }
+
+  function openXrevYH() {
+    var X = HYXREV_YH, st = X.stats;
+    vname.textContent = "唐志对照 · 宋×唐";
+    pmeta.innerHTML = "<span>宋 361 府州 ↔ 唐 227 州府</span><span>元和郡县图志 813</span><span>YHJZ 只读桥接</span>";
+    var html = xrSubTabs("yh");
+    html += '<div class="p-kicker">互查橋 · 總覽（宋視角）</div>';
+    html += '<div class="kv">宋府州 <b>' + st.song_zhou + "</b> → 得唐對應 <b>" + st.matched +
+      "</b>（同名 <b>" + st.tong + "</b> · 同治異名 <b>" + st.yiming + "</b>（升降并注 " + st.sj +
+      " 組）· 異隸 <b>" + st.yili + "</b>）· 無唐對應 <b>" + st.wu + "</b>（宋新置軍監 <b>" +
+      st.none_jun + "</b> · 新置/改併/唐志闕卷 <b>" + (st.wu - st.none_jun - st.ph) +
+      "</b> · 佔位條 <b>" + st.ph + "</b>）；唐側 " + st.tang_states +
+      " 州中 " + st.matched + " 州被反向對應（與元和站判檔逐條對賬一致）。</div>";
+    html += '<div class="quote"><span class="ql">檔位口徑（tools/build_xrev_yh.py 可重算）</span>' +
+      "元和站已判 227 唐州 ↔ 198 宋條（同名/同治異名/異隸，三證在彼站可复核），" +
+      "本站反轉為宋視角逐州取檔；「無唐對應」=《元和郡縣圖志》(813) 無此條——" +
+      "宋新置軍監（廣濟軍、利國監）、唐末五代改併、或唐志闕卷所失，如實計不冒認。凡計數出自腳本。</div>";
+
+    /* 按道分组计数 */
+    html += '<div class="p-kicker" style="margin-top:12px">分道計數</div><div class="xrtable-wrap"><table class="xrtable"><thead><tr>' +
+      "<th>道</th><th>州</th><th>同名</th><th>异名</th><th>异隶</th><th>无唐对应</th></tr></thead><tbody>";
+    X.by_dao.forEach(function (d) {
+      html += "<tr><td>" + d.dao + "</td><td>" + d.total + "</td><td>" + d.tong + "</td><td>" +
+        d.yiming + "</td><td>" + (d.yili ? "<b>" + d.yili + "</b>" : "0") + "</td><td>" + d.wu + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+
+    /* 样例：宋条目在上（本站之书）× 唐对应在下（↗元和） */
+    html += '<div class="p-kicker" style="margin-top:14px">樣例 · 寰宇條目 × 元和對應州</div>';
+    X.samples.forEach(function (s) {
+      var bd = (s.kind === "同治异名" ? '<span class="xrtag t-yiming">異名</span>' : "") +
+        (s.sj ? '<span class="xrtag t-sj">' + s.sj + "</span>" : "") +
+        (s.yili ? '<span class="xrtag t-yili">異隸</span>' : "");
+      html += '<div class="quote"><span class="ql">宋 · ' + s.sn + "　" + bd + "</span>" +
+        s.sq + "……<i>——太平寰宇記</i></div>";
+      html += '<div class="quote"><span class="ql">唐 · ' + s.tn +
+        '　<a class="xrjump" href="../YHJZ/#dao=' + s.tid + "&zhou=" + encodeURIComponent(s.tn) +
+        '" target="_blank" rel="noopener" title="↗元和经纬：' + s.tn + '">↗元和</a></span>' +
+        s.tq + "……<i>——元和郡縣圖志</i></div>";
+    });
+
+    /* 全表（筛选） */
+    html += '<div class="p-kicker" style="margin-top:14px">全表 ' + st.song_zhou + ' 行 · 點宋州名入本站州卡</div>';
+    html += '<div class="xrfilters">';
+    html += '<button class="xf on" data-f="all">全部 ' + st.song_zhou + "</button>";
+    ["tong", "yiming", "yili", "wu"].forEach(function (rel) {
+      html += '<button class="xf" data-f="' + rel + '">' + XR2_REL[rel] + " " + st[rel] + "</button>";
+    });
+    html += "</div><div id=\"xr2list\">";
+    X.by_dao.forEach(function (d) {
+      var sub = X.rows.filter(function (r) { return r.dao === d.dao; });
+      html += '<div class="daohead">' + d.dao + '<span class="ct">' + sub.length + " 州</span></div>";
+      html += sub.map(xr2RowHtml).join("");
+    });
+    html += "</div>";
+    html += '<div class="hint">↗ 深鏈約定<b>父目錄同根服務</b>：在 D:\\W_A_W 起 <code>python -m http.server</code> 後，' +
+      "/TPHY/ 與 /YHJZ/ 同源互達（相對路徑 ../YHJZ/）；GitHub Pages 兩項目頁同帳號下（user.github.io/TPHY/ ↔ /YHJZ/）相對路徑亦通。" +
+      "元和經緯為姐妹妹站，本站只讀其判檔數據、絕不寫入；彼站「唐宋對照」頁簽為唐視角正向橋，與此互為表裡。";
+
+    pbody.className = "";
+    pbody.innerHTML = html;
+    pbody.querySelectorAll(".xrrow .xrz").forEach(function (el) {
+      el.onclick = function () { HYAPP.openZhou(el.parentNode.dataset.z); };
+    });
+    pbody.querySelectorAll(".xf").forEach(function (b) {
+      b.onclick = function () {
+        pbody.querySelectorAll(".xf").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        var f = b.dataset.f;
+        pbody.querySelectorAll(".xrrow").forEach(function (row) {
+          row.style.display = (f === "all" || row.dataset.rel === f) ? "" : "none";
+        });
+        pbody.querySelectorAll(".daohead").forEach(function (h) { h.style.display = ""; });
+      };
+    });
+    bindXrTabs();
     show("對照");
   }
 
@@ -374,9 +500,10 @@ var HYPANEL = (() => {
       "命令行同款：<code>python tools/export_data.py</code> → docs/export/。</div>" +
       '<div class="p-kicker">研究論文</div>' +
       '<div class="btnrow"><a class="abtn solid" href="docs/寰宇经纬-数字人文.pdf" target="_blank" rel="noopener">📄 寰宇經緯-數字人文.pdf</a>' +
-      '<button class="abtn" id="goxref">☰ 明志對照</button></div>' +
+      '<button class="abtn" id="goxref">☰ 明志對照</button>' +
+      '<button class="abtn" id="goxrev2">☰ 唐志對照</button></div>' +
       '<div class="hint">論文 PDF 由 tools/build_paper_pdf.py 排印，數字全出自 stats.json；' +
-      "宋明互查橋見「對照」頁籤（../HHH/ 深鏈，父目錄同根服務）。</div>";
+      "宋明/唐宋互查橋見「對照」頁籤（../HHH/、../YHJZ/ 深鏈，父目錄同根服務或同帳號 GitHub Pages 項目頁）。</div>";
     pbody.className = "";
     pbody.innerHTML = html;
     document.getElementById("exz").onclick = HYEXPORT.zhouCsv;
@@ -385,7 +512,9 @@ var HYPANEL = (() => {
     document.getElementById("exg").onclick = HYEXPORT.geojson;
     document.getElementById("exr").onclick = HYEXPORT.xrefCsv;
     var gx = document.getElementById("goxref");
-    if (gx) gx.onclick = function () { HYAPP.setMode("duizhao"); };
+    if (gx) gx.onclick = function () { HYAPP.setXref("fy"); };
+    var gx2 = document.getElementById("goxrev2");
+    if (gx2) gx2.onclick = function () { HYAPP.setXref("yh"); };
     show("關於");
   }
 

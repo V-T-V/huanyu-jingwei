@@ -9,14 +9,17 @@ python -m http.server 9700
 # http://127.0.0.1:9700/index.html
 ```
 
-**互查桥深链约定（父目录同根服务）**：「↗方舆」深链用相对兄弟路径 `../HHH/`——
-在 `D:\W_A_W` 起 `python -m http.server` 后 `/TPHY/` 与 `/HHH/` 同源互达。
-方舆经纬为兄弟站，本站只读其数据（`tools/build_xref_fy.py`），**绝不写入**。
+**互查桥深链约定（两种场景同用相对兄弟路径）**：「↗方舆」深链 `../HHH/`、「↗元和」深链 `../YHJZ/`——
+① 父目录同根服务：在 `D:\W_A_W` 起 `python -m http.server` 后 `/TPHY/`、`/HHH/`、`/YHJZ/` 同源互达；
+② GitHub Pages 项目页：同账号下两站分别为 `user.github.io/TPHY/` 与 `user.github.io/YHJZ/`，
+相对路径 `../YHJZ/` 同样解析到位。方舆/元和为兄弟站，本站只读其数据
+（`tools/build_xref_fy.py` / `tools/build_xrev_yh.py`），**绝不写入**。
 
 深链（选中状态自动写回 URL，刷新/分享保持）：
 - `#mode=yutu&dao=jiangnanxi&zhou=洪州` —— 道 + 州详情（舆图模式）
 - `#mode=fen&read=henan` —— 分道而读（懒加载该道全文）
-- `#mode=duizhao` —— 明志对照（宋明府州互查桥）
+- `#mode=duizhao` —— 明志对照（宋明府州互查桥，默认子页）
+- `#mode=duizhao&xr=yh` —— 唐志对照（宋唐互查桥 · 宋视角子页）
 - `#search=開封府` —— 直达一次检索
 
 ## 全景
@@ -36,8 +39,11 @@ python -m http.server 9700
   818,819 字分片，Worker 纯数据扫描，命中卷片段预览，点击直达该道原文
 - **夜读** ☾ 墨色主题（localStorage 记忆）；**漫州** ⚑ 随机一州游历
 - **明志对照**（P2）：361 宋府州 ×《读史方舆纪要》明府/属州三重证据匹配（同名/升府/改名/明属州/存疑/无对应
-  如实分栏），按道计数 + 样例 + **↗方舆**深链；**导出** ⤓ 府州/县 CSV（BOM）· KML · GeoJSON ·
-  宋明对照 CSV（「关于」面板，与 `tools/export_data.py` 同口径）；研究论文 PDF 见 docs/
+  如实分栏），按道计数 + 样例 + **↗方舆**深链
+- **唐志对照**（v0.2.1）：宋视角反向桥——元和站已判 227 唐州 ↔ 198 宋条，本站重组为每宋州 → 唐对应
+  （同名 184 / 同治异名 6（升降并注）/ 异隶 8 / 无唐对应 163 如实分档），样例两书引文对读 + **↗元和**深链
+  （`../YHJZ/#dao=<id>&zhou=<名>`）；与元和站「唐宋对照」页签互为表里（彼为唐视角正向桥）
+- **导出** ⤓ 府州/县 CSV（BOM）· KML · GeoJSON · 宋明对照 CSV（「关于」面板，与 `tools/export_data.py` 同口径）；研究论文 PDF 见 docs/
 
 ## 数据源与覆盖（如实）
 
@@ -66,6 +72,7 @@ build_data.py          # 段落化+状态机解析 → data/site_data.js + data/
 build_text.py          # 全文分道分片 → data/text/*.js（懒加载）+ manifest.json
 tools/build_stats.py   # 文本计量 → docs/stats.json（ANALYSIS.md 数字之源）
 tools/build_xref_fy.py # 宋明互查桥 → data/xref_fy.js（读 HHH site_data.js，只读不写）
+tools/build_xrev_yh.py # 唐宋互查桥（宋视角） → data/xrev_yh.js（读 YHJZ xref_hy.js 判档，只读不写）
 tools/export_data.py   # 古今对照导出 → docs/export/（CSV BOM/KML/GeoJSON，与前端按钮同口径）
 tools/build_paper_pdf.py # 论文排印 → docs/寰宇经纬-数字人文.pdf（lint 哨兵联动 md↔PDF）
 ```
@@ -77,7 +84,7 @@ tools/build_paper_pdf.py # 论文排印 → docs/寰宇经纬-数字人文.pdf�
 
 ```
 python -m http.server 9700 &
-python run_tests.py   # lint 148 项 + 数据断言 + 4 断言页(60+ 断言, VT+CDP 双协议)
+python run_tests.py   # lint 171 项 + 数据断言 + 4 断言页(70+ 断言, VT+CDP 双协议)
 ```
 
 禁用清单（lint 强制）：`map.fire("click")` · `innerHTML.indexOf()` 验证 · `window._闭包量` ·
@@ -93,9 +100,10 @@ css/main.css          # 绢本设色体系
 js/                   # config → map → rail → panels(含导出/对照) → reader → search → ftworker → fulltext → app（defer 链）
 data/site_data.js     # 结构化数据（build_data.py 生成，勿手改）
 data/xref_fy.js       # 宋明互查桥（build_xref_fy.py 生成，勿手改）
+data/xrev_yh.js       # 唐宋互查桥 · 宋视角（build_xrev_yh.py 生成，勿手改）
 data/text/*.js        # 十四分片全文（懒加载）
 data/coverage.json    # 侦察与覆盖结论（coverage.py 生成）
-tools/                # fetch/coverage/lint/build_stats/build_xref_fy/export_data/build_paper_pdf + coords.py
+tools/                # fetch/coverage/lint/build_stats/build_xref_fy/build_xrev_yh/export_data/build_paper_pdf + coords.py
 tests/                # 4 断言页（VT dump-dom + CDP title 双协议）
 vendor/               # Leaflet（自 HHH 复制，同版本）
 docs/                 # ANALYSIS.md + stats.json + 寰宇经纬-数字人文.pdf + export/ + img/
@@ -108,6 +116,12 @@ docs/                 # ANALYSIS.md + stats.json + 寰宇经纬-数字人文.pdf
 - 未定位州 106 个多为羁縻州/边州（岭南陇右为多），俟考
 
 ## 版本
+
+v0.2.1（2026-11-22）——唐志对照：宋×唐互查桥（宋视角）上线「对照」页签双子页
+（`#mode=duizhao&xr=yh`），361 宋府州 → 唐对应 198（同名 184 · 同治异名 6 · 异隶 8）·
+无唐对应 163（新置军监 28 · 新置/改并/阙卷 134 · 占位 1），样例两书对读 + ↗元和深链
+（`../YHJZ/`，父目录同根服务 / 同账号 GitHub Pages 项目页两场景）；元和站 YHJZ 目录零写入；
+lint 新增唐桥哨兵，ANALYSIS/论文 PDF 同步。
 
 v0.2.0（2026-11-22）——P2 收官：论文 PDF（四库本删改与 8 卷原阙版本声明入文）、
 古今对照导出（CSV BOM/KML/GeoJSON + 宋明对照，前端按钮与 tools 同口径）、

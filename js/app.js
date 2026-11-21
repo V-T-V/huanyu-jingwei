@@ -2,7 +2,7 @@
 
 var HYAPP = (() => {
   var mode = "yutu";
-  var st = { dao: null, zhou: null, search: null };
+  var st = { dao: null, zhou: null, search: null, xr: "fy" };
 
   function setMode(m) {
     mode = m;
@@ -16,7 +16,15 @@ var HYAPP = (() => {
       m === "yutu" ? DAO_NOTE.yutu : m === "fen" ? DAO_NOTE.fen :
       m === "duizhao" ? DAO_NOTE.duizhao : DAO_NOTE.about);
     if (m === "about") HYPANEL.openAbout();
-    if (m === "duizhao") HYPANEL.openXref();
+    if (m === "duizhao") HYPANEL.openXref(st.xr);
+  }
+
+  /* 对照页签双子页：fy=宋↔明（默认） · yh=宋↔唐（唐志对照） */
+  function setXref(sub) {
+    st.xr = sub === "yh" ? "yh" : "fy";
+    if (mode !== "duizhao") setMode("duizhao");
+    else HYPANEL.openXref(st.xr);
+    syncHash();
   }
 
   function openDao(daoId, fly) {
@@ -64,6 +72,7 @@ var HYAPP = (() => {
     if (st.dao) h.push("dao=" + st.dao);
     if (st.zhou) h.push("zhou=" + encodeURIComponent(st.zhou));
     if (st.search) h.push("search=" + encodeURIComponent(st.search));
+    if (mode === "duizhao" && st.xr === "yh") h.push("xr=yh");
     if (HYREADER.curDao && mode === "fen") h.push("read=" + HYREADER.curDao);
     history.replaceState(null, "", "#" + h.join("&"));
   }
@@ -83,7 +92,7 @@ var HYAPP = (() => {
       HYSEARCH.run(q.search);
     }
     if (q.mode === "about") setMode("about");
-    if (q.mode === "duizhao") setMode("duizhao");
+    if (q.mode === "duizhao") { if (q.xr === "yh") st.xr = "yh"; setMode("duizhao"); }
   }
 
   /* 全文检索定位后高亮 */
@@ -190,9 +199,9 @@ var HYAPP = (() => {
 
   function setSearch(q) { st.search = q || null; syncHash(); }
 
-  return { init: init, setMode: setMode, openDao: openDao, openZhou: openZhou, setSearch: setSearch,
-           openZhouCardOnly: openZhouCardOnly, deselect: deselect, syncHash: syncHash,
-           highlightTerm: highlightTerm, get mode() { return mode; } };
+  return { init: init, setMode: setMode, setXref: setXref, openDao: openDao, openZhou: openZhou,
+           setSearch: setSearch, openZhouCardOnly: openZhouCardOnly, deselect: deselect,
+           syncHash: syncHash, highlightTerm: highlightTerm, get mode() { return mode; } };
 })();
 
 window.addEventListener("DOMContentLoaded", function () { HYAPP.init(); });

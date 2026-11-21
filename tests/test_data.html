@@ -3,9 +3,10 @@
 <head><meta charset="UTF-8"><title>test_data</title></head>
 <body>
 <div id="testlog">TESTLOG</div>
-<script src="../data/site_data.js?v=2"></script>
-<script src="../data/xref_fy.js?v=2"></script>
-<script src="../js/config.js?v=2"></script>
+<script src="../data/site_data.js?v=3"></script>
+<script src="../data/xref_fy.js?v=3"></script>
+<script src="../data/xrev_yh.js?v=3"></script>
+<script src="../js/config.js?v=3"></script>
 <script>
 (function () {
   var L = [];
@@ -63,6 +64,34 @@
   var rels = {};
   HYXREF.rows.forEach(function (r) { rels[r.rel] = (rels[r.rel] || 0) + 1; });
   A("分档遍历与 stats 一致", rels.none === st.none && rels.near === st.near && rels.rename === st.rename);
+  /* ── 唐宋互查桥（宋视角）── */
+  A("HYXREV_YH 存在", typeof HYXREV_YH === "object" && !!HYXREV_YH.stats);
+  var s2 = HYXREV_YH.stats;
+  A("唐桥总数 = 州数", s2.song_zhou === HY.stats.zhou_count);
+  A("唐桥总账自洽", s2.matched + s2.wu === s2.song_zhou);
+  A("唐桥分档自洽", s2.matched === s2.tong + s2.yiming + s2.yili);
+  A("唐桥行数一致", HYXREV_YH.rows.length === s2.song_zhou);
+  A("唐侧 227 州", s2.tang_states === 227);
+  var k3 = HYXREV_YH.rows.find(function (r) { return r.z === "開封府"; });
+  A("開封府→唐汴州(异名·州→府)", k3 && k3.rel === "yiming" && k3.tn === "汴州" && k3.sj === "州→府" && k3.tid === "henan");
+  var yz2 = HYXREV_YH.rows.find(function (r) { return r.z === "雍州"; });
+  A("雍州→唐京兆府(异名·府→州)", yz2 && yz2.rel === "yiming" && yz2.tn === "京兆府" && yz2.sj === "府→州" && yz2.tid === "guannei");
+  var hz2 = HYXREV_YH.rows.find(function (r) { return r.z === "洪州"; });
+  A("洪州→唐洪州(同名)", hz2 && hz2.rel === "tong" && hz2.tn === "洪州" && hz2.tid === "jiangnan");
+  var yz3 = HYXREV_YH.rows.find(function (r) { return r.z === "渝州"; });
+  A("渝州→唐渝州(异隶·唐隶剑南)", yz3 && yz3.rel === "yili" && yz3.tn === "渝州" && yz3.tdao === "剑南道" && yz3.tid === "jiannan");
+  var gj = HYXREV_YH.rows.find(function (r) { return r.z === "廣濟軍"; });
+  A("廣濟軍无唐对应(军)", gj && gj.rel === "wu" && gj.why.indexOf("军监") > -1);
+  var ph = HYXREV_YH.rows.find(function (r) { return r.z === "領覊縻州"; });
+  A("領覊縻州占位条不计新置", ph && ph.rel === "wu" && HYXREV_YH.stats.none_new === HYXREV_YH.stats.wu - 1);
+  A("唐桥深链基址 ../YHJZ/", HYXREV_YH.link.indexOf("../YHJZ/") === 0);
+  A("唐桥分道计数含 13 道", HYXREV_YH.by_dao.length === 13);
+  var rels2 = {};
+  HYXREV_YH.rows.forEach(function (r) { rels2[r.rel] = (rels2[r.rel] || 0) + 1; });
+  A("唐桥分档遍历与 stats 一致", rels2.tong === s2.tong && rels2.yiming === s2.yiming &&
+    rels2.yili === s2.yili && rels2.wu === s2.wu);
+  A("唐桥样例 8 组含京兆府", HYXREV_YH.samples.length === 8 &&
+    HYXREV_YH.samples.some(function (s) { return s.tn === "京兆府"; }));
   document.getElementById("testlog").textContent = "TESTLOG\n" + L.join("\n") + "\nENDLOG";
 })();
 </script>

@@ -14,6 +14,7 @@
  10  论文同步      ANALYSIS.md 改动而 PDF 未重排即红（md 新于 PDF → 跑 tools/build_paper_pdf.py）
  11  互查桥哨兵    data/xref_fy.js 存在可解析 · 总数=州数 · 分档计数自洽 · 深链格式
  12  导出哨兵      docs/export 五件存在 · 行数与 stats 一致 · CSV 带 BOM
+ 13  唐桥哨兵      data/xrev_yh.js 存在可解析 · 总数=州数 · 分档自洽 · 深链 ../YHJZ/ · 与元和侧对账字段
 """
 import json
 import os
@@ -166,6 +167,34 @@ def main():
         ok("../HHH/" in xr.get("link", ""), "桥深链基址异常")
         idx_html = read("index.html")
         ok("data/xref_fy.js" in idx_html, "index.html 未引入 data/xref_fy.js")
+
+    # ── 13 唐桥哨兵（宋×唐，data/xrev_yh.js）──
+    xr2_path = os.path.join(ROOT, "data", "xrev_yh.js")
+    ok(os.path.exists(xr2_path), "data/xrev_yh.js 不存在（跑 tools/build_xrev_yh.py）")
+    xr2 = None
+    if os.path.exists(xr2_path):
+        x2t = open(xr2_path, encoding="utf-8").read()
+        k2 = x2t.find("const HYXREV_YH = ")
+        ok(k2 >= 0, "xrev_yh.js 缺 const HYXREV_YH")
+        try:
+            xr2 = json.loads(x2t[k2 + len("const HYXREV_YH = "):].rstrip().rstrip(";"))
+        except Exception as e:
+            ok(False, "xrev_yh.js 解析失败: %s" % e)
+    if xr2:
+        x2 = xr2["stats"]
+        ok(x2["song_zhou"] == s["zhou_count"], "唐桥总数 %s ≠ 州数 %s" % (x2["song_zhou"], s["zhou_count"]))
+        ok(x2["matched"] == x2["tong"] + x2["yiming"] + x2["yili"], "唐桥分档不自洽")
+        ok(x2["matched"] + x2["wu"] == x2["song_zhou"], "唐桥总账不自洽")
+        ok(x2["wu"] == x2["none_new"] + x2["ph"], "唐桥无对应子账不自洽")
+        ok(len(xr2["rows"]) == x2["song_zhou"], "唐桥行数 %d ≠ %d" % (len(xr2["rows"]), x2["song_zhou"]))
+        rels2 = {r["rel"] for r in xr2["rows"]}
+        ok(rels2 <= {"tong", "yiming", "yili", "wu"}, "唐桥出现未定义 rel: %s" % rels2)
+        ok(all(r["z"] and r["dao"] for r in xr2["rows"]), "唐桥行缺州名/道名")
+        ok(all(r.get("tn") and r.get("tid") for r in xr2["rows"] if r["rel"] != "wu"),
+           "唐桥匹配行缺唐州名/元和道 id（深链字段）")
+        ok(all(r.get("why") for r in xr2["rows"] if r["rel"] == "wu"), "唐桥无对应行缺 why 说明")
+        ok("../YHJZ/" in xr2.get("link", ""), "唐桥深链基址异常")
+        ok("data/xrev_yh.js" in idx, "index.html 未引入 data/xrev_yh.js")
 
     # ── 12 导出哨兵 ──
     ex = os.path.join(ROOT, "docs", "export")
