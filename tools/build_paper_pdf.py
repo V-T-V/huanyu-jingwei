@@ -12,11 +12,20 @@ from reportlab.lib.units import mm
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import (BaseDocTemplate, Frame, HRFlowable, KeepTogether,
+from reportlab.platypus import (BaseDocTemplate, Frame, HRFlowable, Image, KeepTogether,
                                 PageTemplate, Paragraph, Spacer, Table, TableStyle)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "寰宇经纬-数字人文.pdf")
+
+# 插图缺失时自动重建（管线可重入：docs/stats.json → build_paper_figs.py，学 HHH）
+FIGS_DIR = os.path.join(ROOT, "docs", "figs")
+NEED_FIGS = ["fig1_dao.png", "fig2_dist.png", "fig3_books.png"]
+if not all(os.path.isfile(os.path.join(FIGS_DIR, f)) for f in NEED_FIGS):
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, "-I", os.path.join(ROOT, "tools", "build_paper_figs.py")],
+                   check=True)
 
 S = json.load(open(os.path.join(ROOT, "docs", "stats.json"), encoding="utf-8"))
 COV = json.load(open(os.path.join(ROOT, "data", "coverage.json"), encoding="utf-8"))
@@ -87,6 +96,11 @@ def tbl(headers, rows, widths, caption=None, left_cols=()):
     if caption:
         out.append(Paragraph(caption, ST["cap"]))
     return KeepTogether(out)
+
+
+def fig(fname, h_mm, caption):
+    img = Image(os.path.join(FIGS_DIR, fname), width=AW, height=h_mm * mm, hAlign="CENTER")
+    return KeepTogether([Spacer(1, 2 * mm), img, Paragraph(caption, ST["cap"])])
 
 
 def footer(cv, doc):
@@ -168,7 +182,9 @@ E += [P("二、覆盖与分道结构", "h1"),
           "表 1　分道卷帙与字数（阙卷由邻卷继承归组；stats.json dao_chars）"),
       P("四夷 %s 字，占全书 17.4%%——乐史「讫于四夷」的体例使边疆叙述成为全书第二大部（仅次于河南道 %s 字）。"
         "这既是空间观（天下—四夷秩序）的文本投影，也意味着任何以本书为源的边地研究都必须先核四夷卷的版本状态。"
-        % (format(DAO_CHARS["四夷"], ","), format(DAO_CHARS["河南道"], ",")))]
+        % (format(DAO_CHARS["四夷"], ","), format(DAO_CHARS["河南道"], ","))),
+      fig("fig1_dao.png", 127.5,
+          "图 1　分道卷帙字数——河南道居首，「讫于四夷」占 17.4%（docs/stats.json: dao_chars）")]
 
 # ── 三、空间结构 ──
 E += [P("三、空间结构：361 府州与 1,281 属县", "h1"),
@@ -193,7 +209,11 @@ E += [P("四、县距州的里程分布", "h1"),
           [.3, .16, .12, .12, .3], "表 3　县距州里程（stats.json dist_*）"),
       P("与《读史方舆纪要》明代县距府城中位 120 里对照，宋初属县布置更贴近州城（中位 %d 里）。"
         "二书里程单位或有差异（宋里较短、且纪要多记驿路），此处仅作量级对照；严格比较须以同口径样本重算。"
-        % S["dist_median_li"])]
+        % S["dist_median_li"]),
+      fig("fig2_dist.png", 96.8,
+          "图 2　县距州里程分布（n=%d）——中位 %d 里 · P10 %d · P90 %d，长尾至 %d 里"
+          % (S["dist_sample_n"], S["dist_median_li"], S["dist_p10"], S["dist_p90"], S["dist_raw"][-1])
+          + "（docs/stats.json: dist_raw / dist_*）")]
 
 # ── 五、栏目覆盖 ──
 E += [P("五、栏目字段覆盖：乐史的「方志全家福」", "h1"),
@@ -221,7 +241,9 @@ E += [P("六、引书考古：两汉与地志的双轴", "h1"),
         "《水經注》%d 次亦在前列。值得注意的「缺席」：《元和郡縣志》全书正文出现 0 次——"
         "乐史成书（太平兴国）时《元和志》虽已行世，然其取径为括地志—郡国志一系地志，未以《元和志》为蓝本；"
         "反过来《元和志》恰是本书体例的上游。引书计数含书名见于叙述者（非严格引文句式），供量级参考。"
-        % (BK["漢書"], BK["郡國志"], BK["輿地志"], BK["圖經"], BK["水經注"]))]
+        % (BK["漢書"], BK["郡國志"], BK["輿地志"], BK["圖經"], BK["水經注"])),
+      fig("fig3_books.png", 99.2,
+          "图 3　引书考古 TOP8——史部（漢書·史記·左傳）与地志谱系双轴（docs/stats.json: book_counts）")]
 
 # ── 七、风土词汇 ──
 tc_pairs = [("里", TC["里"]), ("山", TC["山"]), ("城", TC["城"]), ("水", TC["水"]),

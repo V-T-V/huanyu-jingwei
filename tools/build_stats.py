@@ -97,6 +97,7 @@ def main():
         "dist_median_li": med,
         "dist_p10": dists[len(dists) // 10] if dists else 0,
         "dist_p90": dists[len(dists) * 9 // 10] if dists else 0,
+        "dist_raw": dists,          # 558 个原始里程样本（论文直方图用，凡数字出自脚本）
     }
     os.makedirs(DOCS, exist_ok=True)
     with open(os.path.join(DOCS, "stats.json"), "w", encoding="utf-8") as f:
