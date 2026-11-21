@@ -54,6 +54,42 @@ def data_asserts():
           f" · 县 {s['xian_count']}(上图 {s['xian_coord']}) · 全文 {s['total_chars']:,} 字")
 
 
+def account_sums():
+    """账目对账（SHA256SUMS）：逐行指纹与磁盘实测（行尾无关）+ 行数与生成器一致，过期即红。"""
+    import importlib.util
+    import re as _re
+    spec = importlib.util.spec_from_file_location(
+        "build_sums", os.path.join(ROOT, "tools", "build_sums.py"))
+    bs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bs)
+    want = bs.collect()
+    path = os.path.join(ROOT, "SHA256SUMS")
+    assert os.path.exists(path), "SHA256SUMS 缺失——先 python tools/build_sums.py"
+    raw = open(path, "rb").read()
+    assert b"\r" not in raw, "SHA256SUMS 行尾混入 CR——须纯 LF，重跑 tools/build_sums.py"
+    lines = raw.decode("utf-8").splitlines()
+    assert lines, "SHA256SUMS 为空"
+    problems, seen = [], set()
+    for i, line in enumerate(lines, 1):
+        parts = line.split("  ", 1)
+        rel = parts[1].strip().replace("\\", "/") if len(parts) == 2 else ""
+        if len(parts) != 2 or not _re.fullmatch(r"[0-9a-f]{64}", parts[0]) or not rel:
+            problems.append(f"第{i}行格式非法"); continue
+        if rel in seen:
+            problems.append(f"第{i}行重复 {rel}"); continue
+        seen.add(rel)
+        if not os.path.isfile(os.path.join(ROOT, rel)):
+            problems.append(f"账上文件缺失 {rel}"); continue
+        if bs.sha256(rel) != parts[0]:
+            problems.append(f"指纹不符 {rel}")
+    assert not problems, f"账目失真 {len(problems)} 处：{problems[:4]}——重跑 python tools/build_sums.py"
+    assert len(lines) == len(want), \
+        f"账目行数 {len(lines)} ≠ 生成器 {len(want)}（产物增删未记账）——重跑 python tools/build_sums.py"
+    off = [r for r in want if r not in seen]
+    assert not off, f"产物缺账 {off[:4]}——重跑 python tools/build_sums.py"
+    print(f"SHA256SUMS 对账通过：{len(lines)} 行 · 指纹全符（纯 LF）")
+
+
 CANDS = [
     os.environ.get("HY_BROWSER", ""),
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -142,6 +178,7 @@ def main():
     print("浏览器:", EDGE or "(仅 python 断言)")
     step("lint", lint)
     step("数据断言", data_asserts)
+    step("账目对账", account_sums)
     if BASE.startswith("http://127.0.0.1") or BASE.startswith("http://localhost"):
         import urllib.request
         try:

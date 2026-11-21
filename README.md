@@ -115,6 +115,8 @@ docs/                 # ANALYSIS.md + stats.json + 寰宇经纬-数字人文.pdf
 - 县点分 `fu`（附郭=州治）/ `tri`（三角化，带原文方位里程 `d`）两种，未定位县如实留白
 - 未定位州 106 个多为羁縻州/边州（岭南陇右为多），俟考
 
+学术引用：[CITATION.cff](CITATION.cff)（CFF 1.2.0 · dataset）——构建产物指纹账本另见 [SHA256SUMS](SHA256SUMS)，`python tools/build_sums.py` 重算、`run_tests.py` 对账。
+
 ## 版本
 
 v0.2.1（2026-11-22）——唐志对照：宋×唐互查桥（宋视角）上线「对照」页签双子页
