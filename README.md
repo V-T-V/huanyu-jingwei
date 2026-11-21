@@ -1,5 +1,7 @@
 # 寰宇经纬 · 太平寰宇记
 
+[![CI](https://github.com/V-T-V/huanyu-jingwei/actions/workflows/ci.yml/badge.svg)](https://github.com/V-T-V/huanyu-jingwei/actions/workflows/ci.yml)
+
 宋·乐史《太平寰宇记》二百卷数字人文站。纯静态前端 + Python 数据管线，四站会战（霞客/伽蓝/元和/寰宇）之一。
 
 ## 打开
