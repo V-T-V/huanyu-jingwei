@@ -174,10 +174,12 @@ var HYAPP = (() => {
     HYMAP.onZhou = function (z) { openZhou(z.n); };
     HYMAP.onXian = function (z, x) { HYPANEL.openXian(z, x); };
     fromHash();
+    var bt = document.getElementById("boot");
     if (!location.hash) setTimeout(function () {
       var b = document.getElementById("boot");
       if (b) b.classList.add("off");
     }, 2600);
+    else if (bt) bt.classList.add("off");   /* 深链直达: 序幕即隐 */
   }
 
   function setSearch(q) { st.search = q || null; syncHash(); }

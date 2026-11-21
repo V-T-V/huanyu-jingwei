@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>寰宇经纬 · 三维形胜</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css?v=1">
+<style>
+:root { --paper:#efe6cf; --ink:#2b2416; --red:#b23a2e; --teal:#2f5d70; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; font-family:"KaiTi","STKaiti",serif; }
+#map3d { position:absolute; inset:0; }
+#hud { position:absolute; top:14px; left:16px; z-index:10; background:rgba(239,230,207,.9);
+  border:1px solid rgba(90,72,44,.3); border-radius:10px; padding:10px 16px; max-width:330px; }
+#hud h1 { font-size:19px; letter-spacing:3px; color:var(--ink); font-weight:normal; }
+#hud p { font-size:12px; color:#5a4c34; margin-top:5px; font-family:"Microsoft YaHei",sans-serif; line-height:1.6; }
+#views { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); z-index:10;
+  display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+#views button { padding:6px 14px; border-radius:16px; border:1px solid rgba(90,72,44,.4);
+  background:rgba(239,230,207,.92); color:var(--ink); font-family:inherit; font-size:13px; cursor:pointer; }
+#views button:hover { border-color:var(--teal); color:var(--teal); }
+#views button.on { background:var(--teal); color:#f6efdc; }
+#card { position:absolute; right:16px; top:14px; z-index:10; width:250px;
+  background:rgba(239,230,207,.93); border:1px solid rgba(90,72,44,.3); border-radius:10px;
+  padding:13px 15px; display:none; }
+#card h3 { font-size:18px; color:var(--red); font-weight:normal; }
+#card .m { font-size:11px; color:#5a4c34; font-family:"Microsoft YaHei",sans-serif; margin-top:3px; }
+#card .x { font-size:11px; color:#5a4c34; margin-top:6px; line-height:1.6; max-height:180px; overflow:auto; }
+#hint { position:absolute; bottom:64px; left:50%; transform:translateX(-50%); z-index:9;
+  font-size:11px; color:#5a4c34; font-family:"Microsoft YaHei",sans-serif; opacity:.8; }
+a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal); font-size:13px;
+  text-decoration:none; background:rgba(239,230,207,.9); padding:5px 12px; border-radius:14px;
+  border:1px solid rgba(90,72,44,.3); }
+</style>
+</head>
+<body>
+<div id="map3d"></div>
+<div id="hud">
+  <h1>寰宇經緯 · 三維形勝</h1>
+  <p>太平寰宇記 255 州治立于真山川（AWS 地形 · 夸张 1.35）。州点道色同 2D。点击州名开卡；「入 2D 详卷」深链返回。</p>
+</div>
+<a class="back" href="index.html">↩ 2D 輿圖</a>
+<div id="card"><h3 id="cn"></h3><div class="m" id="cm"></div><div class="x" id="cx"></div></div>
+<div id="hint">Ctrl+拖拽俯仰 · 右键旋转 · 滚轮缩放</div>
+<div id="views"></div>
+
+<script src="vendor/maplibre-gl.js?v=1"></script>
+<script src="data/site_data.js?v=1"></script>
+<script src="js/config.js?v=1"></script>
+<script>
+(function () {
+  if (typeof maplibregl === "undefined") {
+    document.body.innerHTML = "<p style='padding:40px'>MapLibre 加载失败（vendor/maplibre-gl.js）</p>";
+    return;
+  }
+  var map = new maplibregl.Map({
+    container: "map3d",
+    style: {
+      version: 8,
+      glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+      sources: {
+        sat: { type: "raster", tiles: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+          tileSize: 256, maxzoom: 16 },
+        terrain: { type: "raster-dem", tiles: [
+          "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+          encoding: "terrarium", tileSize: 256, maxzoom: 13 },
+      },
+      layers: [
+        { id: "bg", type: "background", paint: { "background-color": "#dcd2b4" } },
+        { id: "sat", type: "raster", source: "sat", paint: { "raster-opacity": .82,
+          "raster-saturation": -0.35, "raster-brightness-max": 1.05 } },
+      ],
+    },
+    center: [108.5, 34.5], zoom: 3.6, pitch: 52, bearing: -18,
+    attributionControl: false, antialias: true,
+    maxBounds: [[85, 15], [135, 47]],
+  });
+  map.on("error", function (e) { /* 高程/字体不可达则自动降级 */ });
+  map.on("load", function () {
+    map.addSource("hy", { type: "geojson", data: zhouGeo() });
+    map.addLayer({
+      id: "zhou-halo", type: "circle", source: "hy",
+      paint: { "circle-radius": 6.5, "circle-color": ["get", "color"],
+        "circle-opacity": .28, "circle-stroke-width": 1, "circle-stroke-color": ["get", "color"] },
+    });
+    map.addLayer({
+      id: "zhou-dot", type: "circle", source: "hy",
+      paint: { "circle-radius": 3.2, "circle-color": ["get", "color"],
+        "circle-stroke-width": 1, "circle-stroke-color": "#f6efdc" },
+    });
+    try { map.setTerrain({ source: "terrain", exaggeration: 1.35 }); } catch (e) {}
+    map.on("click", ["zhou-dot", "zhou-halo"], function (e) {
+      var z = e.features[0].properties;
+      var card = document.getElementById("card");
+      document.getElementById("cn").textContent = z.n;
+      document.getElementById("cm").textContent = z.dao + " · 今" + (z.now || "?") + " · 卷" + z.vols;
+      document.getElementById("cx").textContent = (z.yz || "").slice(0, 130) + "……";
+      card.style.display = "block";
+      map.flyTo({ center: [e.lngLat.lng, e.lngLat.lat], zoom: Math.max(map.getZoom(), 6.4), duration: 1.2 });
+    });
+  });
+
+  function zhouGeo() {
+    var feats = HY.zhou.filter(function (z) { return z.c; }).map(function (z) {
+      return { type: "Feature",
+        geometry: { type: "Point", coordinates: [z.c[1], z.c[0]] },
+        properties: { n: z.n, dao: z.dao, now: z.now || "", vols: String(z.vols[0]),
+          yz: z.yz || "", color: DAOCOLORS[(HY.daos.find(function (d) { return d.name === z.dao; }) || {}).id] || "#8b8069" } };
+    });
+    return { type: "FeatureCollection", features: feats };
+  }
+
+  /* 形胜视角（学方舆经纬「形胜视角」） */
+  var VIEWS = [
+    ["關中望中原", [109.0, 34.3], 5.6, 58, 100],
+    ["洛陽伊闕", [112.5, 34.6], 6.2, 60, 20],
+    ["劍門窺蜀", [105.5, 32.2], 6.6, 66, 160],
+    ["太行井陘", [113.9, 38.05], 6.4, 62, 140],
+    ["江陵望三峽", [112.4, 30.4], 6.0, 58, 250],
+    ["嶺南五羊", [113.3, 23.1], 6.0, 55, 30],
+  ];
+  var host = document.getElementById("views");
+  VIEWS.forEach(function (v, i) {
+    var b = document.createElement("button");
+    b.textContent = v[0];
+    b.onclick = function () {
+      document.querySelectorAll("#views button").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      map.flyTo({ center: v[1], zoom: v[2], pitch: v[3], bearing: v[4], duration: 2.6 });
+    };
+    host.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
