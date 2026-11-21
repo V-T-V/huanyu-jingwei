@@ -3,10 +3,10 @@
 <head><meta charset="UTF-8"><title>test_data</title></head>
 <body>
 <div id="testlog">TESTLOG</div>
-<script src="../data/site_data.js?v=4"></script>
-<script src="../data/xref_fy.js?v=4"></script>
-<script src="../data/xrev_yh.js?v=4"></script>
-<script src="../js/config.js?v=4"></script>
+<script src="../data/site_data.js?v=5"></script>
+<script src="../data/xref_fy.js?v=5"></script>
+<script src="../data/xrev_yh.js?v=5"></script>
+<script src="../js/config.js?v=5"></script>
 <script>
 (function () {
   var L = [];
@@ -92,6 +92,36 @@
     rels2.yili === s2.yili && rels2.wu === s2.wu);
   A("唐桥样例 8 组含京兆府", HYXREV_YH.samples.length === 8 &&
     HYXREV_YH.samples.some(function (s) { return s.tn === "京兆府"; }));
+  /* ── v0.2.2 粘连强拆 + 异体归并 + 文柱数据 ── */
+  var all = 0;
+  HY.zhou.forEach(function (z) { all += z.xian.length; });
+  A("县数遍历 = stats.xian_count", all === HY.stats.xian_count);
+  var yz2 = HY.zhou.find(function (z) { return z.n === "雍州"; });
+  A("雍州涇陽/櫟陽已拆分", yz2 && yz2.xian.some(function (x) { return x.n === "涇陽"; }) &&
+    yz2.xian.some(function (x) { return x.n === "櫟陽"; }) &&
+    !yz2.xian.some(function (x) { return x.n === "涇陽櫟陽"; }));
+  var fz2 = HY.zhou.find(function (z) { return z.n === "鳯翔府"; });
+  A("鳯翔 虢/麟遊 拆分而 盩厔京兆(割隶注记)如实留", fz2 &&
+    fz2.xian.some(function (x) { return x.n === "虢"; }) &&
+    fz2.xian.some(function (x) { return x.n === "盩厔京兆"; }));
+  var wz2 = HY.zhou.find(function (z) { return z.n === "魏州"; });
+  A("魏州 莘/朝城 拆分", wz2 && wz2.xian.some(function (x) { return x.n === "莘"; }) &&
+    wz2.xian.some(function (x) { return x.n === "朝城"; }));
+  A("强拆台账 15 例", Array.isArray(HY.stats.fused_split) && HY.stats.fused_split.length === 15);
+  A("强拆对账：拆件皆在该州县表", HY.stats.fused_split.every(function (sp) {
+    var z = HY.zhou.find(function (q) { return q.n === sp.state; });
+    return z && sp.parts.every(function (p) {
+      return z.xian.some(function (x) { return x.n === p; });
+    });
+  }));
+  var tz2 = HY.zhou.find(function (z) { return z.n === "台州"; });
+  A("异体归并 岩→巖(黄巖)", tz2 && tz2.xian.some(function (x) { return x.n === "黄巖"; }));
+  var yzh2 = HY.zhou.find(function (z) { return z.n === "洋州"; });
+  A("异体归并 眞→真(真符)", yzh2 && yzh2.xian.some(function (x) { return x.n === "真符"; }));
+  var kf3 = HY.zhou.find(function (z) { return z.n === "開封府"; });
+  A("文柱数据 yt(開封府 7947)", kf3 && kf3.yt === 7947);
+  var np = HY.zhou.filter(function (z) { return z.c && (z.yt || 0) >= 2500; }).length;
+  A("文柱大州 55(50-60)", np >= 50 && np <= 60);
   document.getElementById("testlog").textContent = "TESTLOG\n" + L.join("\n") + "\nENDLOG";
 })();
 </script>

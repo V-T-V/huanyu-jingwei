@@ -79,6 +79,14 @@ def main():
     ok(all(z.get("dao") for z in hy["zhou"]), "存在无道名的州")
     coords = [z for z in hy["zhou"] if z.get("c")]
     ok(all(15 < z["c"][0] < 46 and 88 < z["c"][1] < 132 for z in coords), "坐标越界(域外点)")
+    # v0.2.2 粘连强拆对账: 台账逐条落到州县表, 拆件在而整token已不在
+    zs = {z["n"]: z for z in hy["zhou"]}
+    for sp in s.get("fused_split", []):
+        z = zs.get(sp["state"])
+        names = [x["n"] for x in z["xian"]] if z else []
+        ok(z and all(p in names for p in sp["parts"]) and sp["token"] not in names,
+           "强拆对账失败: %s %s" % (sp["state"], sp["token"]))
+    ok(all(isinstance(z.get("yt", -1), int) and z["yt"] >= 0 for z in hy["zhou"]), "存在州缺 yt 文量字段")
 
     # ── 4 分片哨兵 ──
     tdir = os.path.join(ROOT, "data", "text")

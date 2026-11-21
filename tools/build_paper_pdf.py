@@ -133,7 +133,7 @@ E = []
 E += [Spacer(1, 10 * mm),
       Paragraph("《太平寰宇记》的空间与文本计量研究", ST["title"]),
       Spacer(1, 3 * mm),
-      Paragraph("——基于文渊阁四库本 192 卷 818,819 字与 361 府州、1,281 属县的数字人文分析", ST["sub"]),
+      Paragraph("——基于文渊阁四库本 192 卷 818,819 字与 361 府州、%s 属县的数字人文分析" % format(S["xian_count"], ","), ST["sub"]),
       Spacer(1, 8 * mm),
       Paragraph("寰宇经纬项目组", ST["sub"]),
       Paragraph("2026 年 11 月 · 全部数字由脚本可复核（tools/build_stats.py / build_xref_fy.py / build_xrev_yh.py / export_data.py）", ST["sub"]),
@@ -143,13 +143,15 @@ E += [Spacer(1, 10 * mm),
 
 nfc = sum(FC[k] for k in ("sizhi", "fengsu", "hu", "tuchan", "xingishi", "renwu", "jing"))
 abs_tbl = Table([[
-    P("<b>摘　要</b>　宋·乐史《太平寰宇记》二百卷为宋代总志之祖。本文将其文渊阁四库本全文（%d 卷、%s 字）解析为机器可读的道—州—县三级结构，作空间与文本双重计量。空间层：361 府州军监中定位州治 %d（确 %d/推 %d），1,281 属县上图 %d（附郭 %d + 方位里程三角化 %d）；县距州里程中位数 %d 里（P10—P90 为 %d—%d 里），与明代《读史方舆纪要》的 120 里中位对照，宋初属县布置更贴州城。文本层：四夷叙述占全书 %s 字数，为仅次于河南道的第二大部；乐史引书以《漢書》%d 次、《郡國志》%d 次居首，两汉正史与地志构成双轴。版本层：四库本原阙 8 卷（卷四、卷一一三至一一九）、馆臣抄辑有讳改删并，本站如实标注、不以他本补配。另建宋明府州互查桥：361 宋州对《纪要》明府/属州得对应 %d（同名 %d·宋州明升府 %d·改名 %d·明为属州 %d），无对应 %d 如实计。"
+    P("<b>摘　要</b>　宋·乐史《太平寰宇记》二百卷为宋代总志之祖。本文将其文渊阁四库本全文（%d 卷、%s 字）解析为机器可读的道—州—县三级结构，作空间与文本双重计量。空间层：361 府州军监中定位州治 %d（确 %d/推 %d），%s 属县上图 %d（附郭 %d + 方位里程三角化 %d）；县距州里程中位数 %d 里（P10—P90 为 %d—%d 里），与明代《读史方舆纪要》的 120 里中位对照，宋初属县布置更贴州城。文本层：四夷叙述占全书 %s 字数，为仅次于河南道的第二大部；乐史引书以《漢書》%d 次、《郡國志》%d 次居首，两汉正史与地志构成双轴。版本层：四库本原阙 8 卷（卷四、卷一一三至一一九）、馆臣抄辑有讳改删并，本站如实标注、不以他本补配。另建宋明府州互查桥：361 宋州对《纪要》明府/属州得对应 %d（同名 %d·宋州明升府 %d·改名 %d·明为属州 %d），无对应 %d 如实计。"
       % (S["vols_got"], format(S["total_chars"], ","), S["zhou_coord"], S["coord_sure"], S["coord_derived"],
+         format(S["xian_count"], ","),
          S["xian_coord"], S["xian_coord"] - S["xian_tri"], S["xian_tri"], S["dist_median_li"],
          S["dist_p10"], S["dist_p90"], "17.4%", BK["漢書"], BK["郡國志"],
          XS["matched"], XS["same"], XS["promo"], XS["rename"], XS["mzhou"], XS["none"]), "abs"),
     P("<b>关键词</b>　太平寰宇记；乐史；数字人文；宋初政区；历史地理；四库本版本", "abs"),
-    P("<b>Abstract</b>  A computational survey of Yue Shi's 10th-century gazetteer (Siku edition, 192 vols, 818,819 chars): 361 prefectures geocoded (255), 626 counties triangulated from bearing-distance clauses (median 90 li); textual profiling of frontier chapters and cited sources; a Song-Ming cross-reference bridge to the Dushi Fangyu Jiyao.", "abs")]],
+    P("<b>Abstract</b>  A computational survey of Yue Shi's 10th-century gazetteer (Siku edition, 192 vols, 818,819 chars): 361 prefectures geocoded (255), %d counties mapped (%d triangulated from bearing-distance clauses, median %d li); textual profiling of frontier chapters and cited sources; a Song-Ming cross-reference bridge to the Dushi Fangyu Jiyao."
+      % (S["xian_coord"], S["xian_tri"], S["dist_median_li"]), "abs")]],
     colWidths=[AW])
 abs_tbl.setStyle(TableStyle([
     ("BACKGROUND", (0, 0), (-1, -1), BG_PAGE),
@@ -167,7 +169,9 @@ E += [P("一、底本与版本声明", "h1"),
           "阙卷所涉为宋州（江南西道部分）与嶺南道部分州军，相关道的统计以现存卷为准，未作外推。"),
       P("（二）<b>馆臣删改</b>。四库本出于清馆臣抄辑校改，涉违碍字样有讳改、删并之例，个别段落存「(闕)」注记（解析时如实保留，不以意补）。"
         "引用本书文字（尤其族名、边事、宋辽金相关表述）时应意识此一版本层，与宋刻残卷、金陵书局本等传本对读。"),
-      P("（三）<b>异体归并</b>。四库本异写（關/闗、劍/劒/劔、潁/頴等三组）在结构化时归并，正文全文保持原样。"
+      P("（三）<b>异体归并与粘连强拆</b>。四库本异写自三组（關/闗、劍/劒/劔、潁/頴）扩至九组"
+        "（增 峰→峯、岩/巗→巖、眞→真、凉→涼、群→羣、来→來，语料双见实证、向高频形并）于结构层归并，正文全文保持原样；"
+        "县名粘连（OCR 脱空/换行拼接）保守强拆 15 例——两半均县条目段实证名且非割隶注记者方拆，余如实留。"
         "凡引用字数、词频，均指本站口径（去空白、去页码标记），脚本可复核。")]
 
 # ── 二、覆盖与分道结构 ──
@@ -187,7 +191,7 @@ E += [P("二、覆盖与分道结构", "h1"),
           "图 1　分道卷帙字数——河南道居首，「讫于四夷」占 17.4%（docs/stats.json: dao_chars）")]
 
 # ── 三、空间结构 ──
-E += [P("三、空间结构：361 府州与 1,281 属县", "h1"),
+E += [P("三、空间结构：361 府州与 %s 属县" % format(S["xian_count"], ","), "h1"),
       tbl(["指标", "府州军监条目", "州治定位", "　确", "　推", "未定位州", "属县名录", "县上图", "附郭", "三角化"],
           [["值", str(S["zhou_count"]), str(S["zhou_coord"]), str(S["coord_sure"]), str(S["coord_derived"]),
             str(S["zhou_count"] - S["zhou_coord"]), str(S["xian_count"]), str(S["xian_coord"]),

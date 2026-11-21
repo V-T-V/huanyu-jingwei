@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><title>test_search</title>
-<link rel="stylesheet" href="../vendor/leaflet.css?v=4">
-<link rel="stylesheet" href="../css/main.css?v=4"></head>
+<link rel="stylesheet" href="../vendor/leaflet.css?v=5">
+<link rel="stylesheet" href="../css/main.css?v=5"></head>
 <body>
 <div id="map"></div>
 <nav id="modes"><button class="mode active" data-mode="yutu">舆图</button><span>·</span>
@@ -17,17 +17,17 @@
 <footer id="fbar"><span id="modelabel"></span><span id="bookstat"></span></footer>
 <div id="testlog">TESTLOG</div>
 <script>window.HYTEXT_BASE = "../data/text/";</script>
-<script src="../vendor/leaflet.js?v=4"></script>
-<script src="../data/site_data.js?v=4"></script>
-<script src="../js/config.js?v=4"></script>
-<script src="../js/map.js?v=4"></script>
-<script src="../js/rail.js?v=4"></script>
-<script src="../js/panels.js?v=4"></script>
-<script src="../js/reader.js?v=4"></script>
-<script src="../js/search.js?v=4"></script>
-<script src="../js/ftworker.js?v=4"></script>
-<script src="../js/fulltext.js?v=4"></script>
-<script src="../js/app.js?v=4"></script>
+<script src="../vendor/leaflet.js?v=5"></script>
+<script src="../data/site_data.js?v=5"></script>
+<script src="../js/config.js?v=5"></script>
+<script src="../js/map.js?v=5"></script>
+<script src="../js/rail.js?v=5"></script>
+<script src="../js/panels.js?v=5"></script>
+<script src="../js/reader.js?v=5"></script>
+<script src="../js/search.js?v=5"></script>
+<script src="../js/ftworker.js?v=5"></script>
+<script src="../js/fulltext.js?v=5"></script>
+<script src="../js/app.js?v=5"></script>
 <script>
 window.onerror = function (m, s, l) {
   document.getElementById("testlog").textContent += "\nFAIL 页面错误 " + m + "@" + l;
@@ -54,7 +54,7 @@ A("深链含 search", location.hash.indexOf("search=") >= 0);
 flush(false);
 /* Worker 全文扫描（真实时间, CDP 轮询 title） */
 var s = document.createElement("script");
-s.src = "../data/text/henan.js?v=4";
+s.src = "../data/text/henan.js?v=5";
 setTimeout(function () {
   if (document.title !== "PASS" && document.title.indexOf("FAIL") !== 0) {
     A("Worker 超时(12s) title=" + document.title, false); flush(true);

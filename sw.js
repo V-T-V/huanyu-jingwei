@@ -1,22 +1,22 @@
 /* 寰宇经纬 · Service Worker v2 —— 外壳预存 + 全文懒存 */
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_FILES = [
   "./index.html",
-  "./css/main.css?v=4",
-  "./vendor/leaflet.js?v=4",
-  "./vendor/leaflet.css?v=4",
-  "./data/site_data.js?v=4",
-  "./data/xref_fy.js?v=4",
-  "./data/xrev_yh.js?v=4",
-  "./js/config.js?v=4",
-  "./js/map.js?v=4",
-  "./js/rail.js?v=4",
-  "./js/panels.js?v=4",
-  "./js/reader.js?v=4",
-  "./js/search.js?v=4",
-  "./js/ftworker.js?v=4",
-  "./js/fulltext.js?v=4",
-  "./js/app.js?v=4",
+  "./css/main.css?v=5",
+  "./vendor/leaflet.js?v=5",
+  "./vendor/leaflet.css?v=5",
+  "./data/site_data.js?v=5",
+  "./data/xref_fy.js?v=5",
+  "./data/xrev_yh.js?v=5",
+  "./js/config.js?v=5",
+  "./js/map.js?v=5",
+  "./js/rail.js?v=5",
+  "./js/panels.js?v=5",
+  "./js/reader.js?v=5",
+  "./js/search.js?v=5",
+  "./js/ftworker.js?v=5",
+  "./js/fulltext.js?v=5",
+  "./js/app.js?v=5",
 ];
 
 self.addEventListener("install", (e) => {

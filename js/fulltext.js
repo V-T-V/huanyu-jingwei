@@ -7,7 +7,7 @@ var HYFULL = (() => {
     var files = (window.HYTEXT_MANIFEST) ? HYTEXT_MANIFEST : [];
     /* 无 manifest 时从 data/text/manifest.json 拉 */
     if (!files.length) {
-      fetch((window.HYTEXT_BASE || "data/text/") + "manifest.json?v=4").then(function (r) { return r.json(); }).then(function (m) {
+      fetch((window.HYTEXT_BASE || "data/text/") + "manifest.json?v=5").then(function (r) { return r.json(); }).then(function (m) {
         window.HYTEXT_MANIFEST = m.files;
         loadAll(m.files, cb);
       });
@@ -22,7 +22,7 @@ var HYFULL = (() => {
     var done = 0;
     todo.forEach(function (f) {
       var s = document.createElement("script");
-      s.src = (window.HYTEXT_BASE || "data/text/") + f.id + ".js?v=4";
+      s.src = (window.HYTEXT_BASE || "data/text/") + f.id + ".js?v=5";
       s.onload = function () {
         loadedDaos[f.id] = true;
         done++;

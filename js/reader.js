@@ -15,7 +15,7 @@ var HYREADER = (() => {
     ensureDao._p = ensureDao._p || {};
     ensureDao._p[daoId] = new Promise(function (ok, bad) {
       var s = document.createElement("script");
-      s.src = (window.HYTEXT_BASE || "data/text/") + daoId + ".js?v=4";
+      s.src = (window.HYTEXT_BASE || "data/text/") + daoId + ".js?v=5";
       s.onload = function () { cache[daoId] = HYTEXT[daoId]; ok(HYTEXT[daoId]); };
       s.onerror = function () { bad(new Error("分片加载失败 " + daoId)); };
       document.head.appendChild(s);

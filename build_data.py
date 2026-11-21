@@ -31,6 +31,18 @@ ZH_NUM = "一二三四五六七八九十百"
 DAO_RE = re.compile(r"^[　\s]*((?:[\u4e00-\u9fff]{1,4}道|四夷))[" + ZH_NUM + r"]*[　\s]*$")
 ZHOU_TAIL = ("府", "州", "軍", "監")
 
+# ── 异体归并（仅结构层：道/州/县/今理名；正文全文保持原样，凡并组语料实证）──
+# 承前三组: 闗→關 劒/劔→劍(道名) · 潁→頴(州名)
+# v0.2.2 增并六组(语料频次 raw 计): 峯139/峰60 · 巖216/岩83/巗3 · 眞25/真294 ·
+#   涼140/凉71(渭州今理「平涼」与县表「平凉」同县异写) · 羣122/群1 · 來814/来211
+VARIANT = str.maketrans({"峰": "峯", "岩": "巖", "巗": "巖", "眞": "真", "凉": "涼",
+                         "群": "羣", "来": "來", "潁": "頴"})
+
+
+def norm_name(s: str) -> str:
+    """州/县/今理名共用异体归并（向语料高频形）"""
+    return s.translate(VARIANT)
+
 
 def load_paras(n: int):
     """读卷 → 段落列表（保留段落首缩进），未得/阙卷返回 None。
@@ -79,8 +91,85 @@ def norm_dao(d: str):
 
 
 def norm_zhou(z: str) -> str:
-    """州名归一化: 潁/頴 异体"""
-    return z.replace("潁", "頴")
+    """州名归一化: 异体归并（v0.22 起与县/今理共用一张异体表，见 VARIANT）"""
+    return norm_name(z)
+
+
+# ── OCR/换行粘连县名保守强拆（v0.2.2）──
+# 版式实测: 县表跨行处无空格（「…醴泉　涿陽¶/櫟陽　高陵…」段落拼行即粘连）、
+# 同行亦有 OCR 脱空（廣陵六合）。仅拆「两半均为县条目段实证名」且非州名尾/州名干
+# 的可证案例; 三形: d1=2+2 · d2=單字縣前綴(X縣+Y) · d3=單字縣後綴(X+Y縣)。
+# 一字半不作州名干校（州引用作「X州/京兆」，不以 X縣 形出现）。拆不了如实留。
+FUSED_LOG = []
+
+
+_EV_CACHE = None
+_ST_CACHE = None
+
+
+def _county_evidence():
+    """全语料县条目段首名实证表: 行首缩进「　　X縣」(X 1-3字), 归一并体; 惰性缓存"""
+    global _EV_CACHE
+    if _EV_CACHE is not None:
+        return _EV_CACHE
+    ev = set()
+    rx = re.compile(r"^[　\s]+([\u4e00-\u9fff]{1,3})縣")
+    for n in range(1, 201):
+        p = os.path.join(RAW, "KR2k0004_%03d.txt" % n)
+        if not os.path.exists(p):
+            continue
+        for ln in open(p, encoding="utf-8"):
+            m = rx.match(ln)
+            if m and m.group(1) not in ("元領", "領縣"):
+                ev.add(norm_name(m.group(1)))
+    _EV_CACHE = ev
+    return ev
+
+
+def _zhou_stems():
+    """州名干（去尾字）: 防「縣名+州名」割隶注记被误拆为两县; 惰性缓存"""
+    global _ST_CACHE
+    if _ST_CACHE is None:
+        _ST_CACHE = {k[:-1] for k in CURATED if k[-1] in ZHOU_TAIL and len(k) >= 2}
+    return _ST_CACHE
+
+
+def _decompose_fused(tk: str, have: set, evidence: set, stems: set):
+    TAILS = "州府軍監"
+
+    def ok2(p):   # 双字半: 须实证县名, 且非州名尾/州名干(割隶注记)
+        return len(p) == 2 and p[-1] not in TAILS and p not in stems and p in evidence
+
+    def ok1(p):   # 单字半: 须实证县名(州引用不取「X縣」形, 免校州干)
+        return len(p) == 1 and p in evidence
+
+    if ok2(tk[:2]) and ok2(tk[2:]):
+        return [tk[:2], tk[2:]]
+    if tk[1] == "縣" and ok1(tk[:1]) and ok2(tk[2:]):
+        return [tk[:1], tk[2:]]
+    if tk[3] == "縣" and ok2(tk[:2]) and ok1(tk[2]):
+        return [tk[:2], tk[2]]
+    return None
+
+
+def split_fused(names, state, vol):
+    """县名清单保守强拆: 4字token 按实证分解; 与既有单列名重复者不拆"""
+    if not any(len(n) == 4 for n in names):
+        return names
+    evidence, stems = _county_evidence(), _zhou_stems()
+    have = {n for n in names if len(n) <= 3}
+    seen = {(f[0], f[2]) for f in FUSED_LOG}
+    out = []
+    for tk in names:
+        if len(tk) == 4:
+            parts = _decompose_fused(tk, have, evidence, stems)
+            if parts and not any(p in have for p in parts):
+                if (state, tk) not in seen:
+                    FUSED_LOG.append((state, vol, tk, tuple(parts)))
+                out.extend(parts)
+                continue
+        out.append(tk)
+    return out
 
 
 def head(p: str) -> str:
@@ -158,13 +247,15 @@ def zhou_yanlai(p: str):
     if jl:
         jinli = jl.group(1)
         jinli = re.sub(r"[一二三四五六七八九十百]$", "", jinli)   # 「長安萬年二」→「長安萬年」
+        jinli = norm_name(jinli)
         if len(jinli) in (4, 6):   # 双附郭「開封浚儀」→「開封、浚儀」
             jinli = "、".join(jinli[i:i + 2] for i in range(0, len(jinli), 2))
     return (name, jinli)
 
 
-def county_list(paras, i: int):
-    """「元領縣」段之后的段(缩进或顶格续段) → 县名列表; 返回 (names, next_i)"""
+def county_list(paras, i: int, state="", vol=0):
+    """「元領縣」段之后的段(缩进或顶格续段) → 县名列表; 返回 (names, next_i)
+    token 归并异体后经 split_fused 保守强拆（OCR/换行粘连, 仅实证可拆）"""
     names = []
     j = i + 1
     while j < len(paras) and j <= i + 4:
@@ -182,14 +273,14 @@ def county_list(paras, i: int):
                 continue
             tk = re.sub(r"(?:自.{0,5})?割到$|(?:自.{0,5})?割出$|新置$|入.{0,4}$", "", tk)
             if tk and _like_county(tk):
-                got.append(tk)
+                got.append(norm_name(tk))
         q_core = re.sub(r"\(.*?\)", "", q.replace("　", ""))
         if got and len(q) <= 240 and sum(len(g) for g in got) >= len(q_core) * .5:
             names.extend(got)
             j += 1
             continue
         break
-    return names, j
+    return split_fused(names, state, vol), j
 
 
 def _like_county(s: str) -> bool:
@@ -224,7 +315,7 @@ def parse_vol(n: int):
         h = head(p).strip() if is_indented(p) else ""
         if h.startswith("元領縣") or h.startswith("領縣"):
             if cur is not None:
-                names, j = county_list(paras, i)
+                names, j = county_list(paras, i, state=cur["name"], vol=n)
                 cur["xian_list"] = names
                 cur_counties = names
                 i = j
@@ -282,11 +373,11 @@ def parse_vol(n: int):
             cur_counties = []
             i += 1
             continue
-        # 县条目: 白名单内 县名+縣 开头
+        # 县条目: 白名单内 县名+縣 开头（条目首名归并异体后对白名单）
         if cur is not None and is_indented(p):
             hh = head(p)
             m2 = re.match(r"^([\u4e00-\u9fff]{1,4})縣", hh)
-            if m2 and m2.group(1) in cur_counties:
+            if m2 and norm_name(m2.group(1)) in cur_counties:
                 cur["xian_paras"].append(p.strip())
                 i += 1
                 continue
@@ -417,12 +508,13 @@ def main():
                 entry["c"] = coord
                 entry["src"] = "fu"       # 附郭=州治
             else:
-                # 在县条目段中找该县方位里程
+                # 在县条目段中找该县方位里程（段首归并异体后对名）
                 hit = None
                 for xp in z["xian_paras"]:
                     hh = head(xp) if xp.startswith("\u3000\u3000") else xp
-                    if hh.startswith(xn + "縣"):
-                        c, d = xian_pos(coord, hh[len(xn) + 1:len(xn) + 12])
+                    nh = norm_name(hh)
+                    if nh.startswith(xn + "縣"):
+                        c, d = xian_pos(coord, nh[len(xn) + 1:len(xn) + 13])
                         if c:
                             hit = (c, d)
                         break
@@ -436,6 +528,8 @@ def main():
             "c": coord, "now": now, "cf": cf, "src": "derived" if coord else None,
             "yz": z["yanzhi"][:520], "ex": {kk: vv for kk, vv in z["fields"].items() if vv},
             "xian": xians, "xc": len(z["xian_paras"]),
+            # 条目文量（沿革段+叙事尾段字数, 3D 沿革文柱高度依据；示意尺度）
+            "yt": len(z["yanzhi"] or "") + sum(len(p) for p in z["tail"]),
         })
     n_xc = sum(1 for z in out_zhou for x in z["xian"] if x.get("c"))
     n_tri = sum(1 for z in out_zhou for x in z["xian"] if x.get("src") == "tri")
@@ -458,6 +552,8 @@ def main():
         "zhou_coord": n_coord, "coord_sure": n_sure, "coord_derived": n_derived,
         "total_chars": total_chars,
         "xian_coord": n_xc, "xian_tri": n_tri,
+        "fused_split": [{"state": s, "vol": v, "token": tk, "parts": list(ps)}
+                        for s, v, tk, ps in FUSED_LOG],
     }
     for v in got:
         report["daos"].setdefault(v["dao"], []).append(v["vol"])
@@ -496,6 +592,10 @@ def main():
     print("府州 %d (定位 %d: 确 %d / 推 %d) · 县 %d (上图 %d: 附郭 %d + 三角化 %d)"
           % (len(order), n_coord, n_sure, n_derived, report["xian_count"], n_xc,
              n_xc - n_tri, n_tri))
+    if FUSED_LOG:
+        print("粘连强拆 %d 例（两半均县条目段实证, 拆不了如实留）:" % len(FUSED_LOG))
+        for s, v, tk, ps in FUSED_LOG:
+            print("  卷%-4d %-6s %s → %s" % (v, s, tk, "·".join(ps)))
     for d, vv in sorted(report["daos"].items(), key=lambda x: min(x[1])):
         print("  %-6s %2d 卷  卷%d–卷%d" % (d, len(vv), min(vv), max(vv)))
     return report
