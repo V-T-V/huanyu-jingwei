@@ -11,10 +11,12 @@ var HYAPP = (() => {
     });
     document.body.className = document.body.className.replace(/m-\w+/g, "").trim() + " m-" + m;
     document.getElementById("modelabel").textContent =
-      m === "yutu" ? "舆图" : m === "fen" ? "分道" : "关于";
+      m === "yutu" ? "舆图" : m === "fen" ? "分道" : m === "duizhao" ? "对照" : "关于";
     document.getElementById("modenote") && (document.getElementById("modenote").textContent =
-      m === "yutu" ? DAO_NOTE.yutu : m === "fen" ? DAO_NOTE.fen : DAO_NOTE.about);
+      m === "yutu" ? DAO_NOTE.yutu : m === "fen" ? DAO_NOTE.fen :
+      m === "duizhao" ? DAO_NOTE.duizhao : DAO_NOTE.about);
     if (m === "about") HYPANEL.openAbout();
+    if (m === "duizhao") HYPANEL.openXref();
   }
 
   function openDao(daoId, fly) {
@@ -81,6 +83,7 @@ var HYAPP = (() => {
       HYSEARCH.run(q.search);
     }
     if (q.mode === "about") setMode("about");
+    if (q.mode === "duizhao") setMode("duizhao");
   }
 
   /* 全文检索定位后高亮 */
@@ -96,7 +99,10 @@ var HYAPP = (() => {
   function elBind(id) { var el = document.getElementById(id); return el || { set onclick(f) {} }; }
   function bindUI() {
     document.querySelectorAll("#modes .mode").forEach(function (b) {
-      b.onclick = function () { setMode(b.dataset.mode); if (b.dataset.mode === "about") syncHash(); };
+      b.onclick = function () {
+        setMode(b.dataset.mode);
+        if (b.dataset.mode === "about" || b.dataset.mode === "duizhao") syncHash();
+      };
     });
     elBind("pclose").onclick = function () {
       HYPANEL.hide();

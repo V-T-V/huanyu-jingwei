@@ -1,4 +1,114 @@
-/* ═══════════ 寰宇经纬 · 面板（道 / 州 / 县 / 关于） ═══════════ */
+/* ═══════════ 寰宇经纬 · 面板（道 / 州 / 县 / 对照 / 关于） ═══════════ */
+
+var HYEXPORT = (() => {
+  /* 导出（与 tools/export_data.py 同口径）：CSV 带 BOM / KML / GeoJSON */
+  function typ(n) {
+    if (n.slice(-1) === "府") return "府";
+    if (n.slice(-1) === "軍") return "军";
+    if (n.slice(-1) === "監") return "监";
+    if (n.slice(-1) === "州") return "州";
+    return "州";
+  }
+  function esc(v) {
+    v = String(v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function save(name, text, mime) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+    a.download = name;
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  }
+  function csv(name, head, rows) {
+    var NL = String.fromCharCode(10), BOM = String.fromCharCode(0xFEFF);
+    save(name, BOM + head.join(",") + NL +
+      rows.map(function (r) { return r.map(esc).join(","); }).join(NL),
+      "text/csv;charset=utf-8");
+  }
+  function zhouRows() {
+    return HY.zhou.map(function (z) {
+      return [z.dao, z.n, typ(z.n), z.vols.join("·"), z.now || "",
+        z.c ? z.c[0].toFixed(2) : "", z.c ? z.c[1].toFixed(2) : "",
+        z.cf || "", z.src || "", z.c ? "" : "未定位（坐标表未收，舆图不上点）"];
+    });
+  }
+  function xianRows() {
+    var out = [];
+    HY.zhou.forEach(function (z) {
+      (z.xian || []).forEach(function (x) {
+        if (!x.c) return;
+        var fu = x.src === "fu";
+        out.push([z.dao, z.n, x.n, x.c[0].toFixed(2), x.c[1].toFixed(2),
+          fu ? "附郭" : "三角化", x.d || "",
+          fu ? "附郭县取州治坐标" : "以州治为极点按原载方位里程推算（1里≈0.55km），方法近似精度±20%"]);
+      });
+    });
+    return out;
+  }
+  function points() {
+    var pts = [];
+    HY.zhou.forEach(function (z) {
+      if (z.c) pts.push([z.n, z.c, z.dao + " · 今" + (z.now || "") + (z.cf ? "（" + z.cf + "）" : "")]);
+      (z.xian || []).forEach(function (x) {
+        if (x.c) pts.push([x.n + "縣", x.c,
+          (x.src === "fu" ? "附郭" : "三角化±20%") + " · 隶" + z.n + (x.d ? "（" + x.d + "）" : "")]);
+      });
+    });
+    return pts;
+  }
+  return {
+    zhouCsv: function () {
+      csv("寰宇经纬-府州对照.csv",
+        ["道", "州名", "类型", "卷", "今地依据", "纬度", "经度", "置信", "src", "未定位"], zhouRows());
+    },
+    xianCsv: function () {
+      csv("寰宇经纬-县对照.csv",
+        ["道", "州名", "县名", "纬度", "经度", "定位方法", "原载方位里程", "备注"], xianRows());
+    },
+    kml: function () {
+      var pts = points();
+      var pins = pts.map(function (p) {
+        return "<Placemark><name>" + p[0] + "</name><description>" + p[2] + "</description>" +
+          "<Point><coordinates>" + p[1][1].toFixed(4) + "," + p[1][0].toFixed(4) + ",0</coordinates></Point></Placemark>";
+      }).join("");
+      save("寰宇经纬-州县点位.kml",
+        '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>' +
+        "<name>寰宇经纬·州县点位</name>" +
+        "<description>宋·太平寰宇记 255 州治 + 626 上图县；三角化县点为示意坐标（±20%）</description>" +
+        pins + "</Document></kml>", "application/vnd.google-earth.kml+xml");
+    },
+    geojson: function () {
+      var feats = [];
+      HY.zhou.forEach(function (z) {
+        if (z.c) feats.push({ type: "Feature",
+          geometry: { type: "Point", coordinates: [z.c[1], z.c[0]] },
+          properties: { 名: z.n, 类: typ(z.n), 道: z.dao, 今地: z.now || "",
+            置信: z.cf || "", src: z.src || "", 依据: "州治今地整编" } });
+        (z.xian || []).forEach(function (x) {
+          if (!x.c) return;
+          feats.push({ type: "Feature",
+            geometry: { type: "Point", coordinates: [x.c[1], x.c[0]] },
+            properties: { 名: x.n, 类: "县", 道: z.dao, 隶: z.n,
+              定位: x.src === "fu" ? "附郭=州治" : "三角化示意坐标(±20%)", 原载: x.d || "" } });
+        });
+      });
+      save("寰宇经纬-州县点位.geojson",
+        JSON.stringify({ type: "FeatureCollection", name: "寰宇经纬-州县点位", features: feats }),
+        "application/geo+json");
+    },
+    xrefCsv: function () {
+      var REL = { same: "同名", promo: "升府", rename: "改名", mzhou: "明属州", near: "近邻存疑", none: "无对应" };
+      csv("寰宇经纬-宋明对照.csv",
+        ["宋州", "道", "宋治今地", "关系", "明省", "明府", "对应单位", "明治今地", "证据", "备注"],
+        HYXREF.rows.map(function (r) {
+          return [r.z, r.dao, r.now, REL[r.rel], r.mpn, r.mf, r.mn, r.mnow,
+            r.ev + (r.d != null ? "·" + r.d + "km" : ""), r.note];
+        }));
+    }
+  };
+})();
+window.HYEXPORT = HYEXPORT;
 
 var HYPANEL = (() => {
   var pbody = document.getElementById("pbody");
@@ -124,6 +234,112 @@ var HYPANEL = (() => {
     show("縣");
   }
 
+  /* ── 明志对照（宋×明府州互查桥，data/xref_fy.js 管线产物）── */
+  var XR_REL = { same: "同名", promo: "升府", rename: "改名", mzhou: "明属州",
+                 near: "近邻存疑", none: "无对应" };
+
+  function xrLink(r) {
+    return "../HHH/#mode=" + encodeURIComponent("舆图") + "&p=" + r.mp +
+      "&fu=" + encodeURIComponent(r.mf);
+  }
+
+  function xrRowHtml(r) {
+    var tag = XR_REL[r.rel];
+    var right;
+    if (r.rel === "none") {
+      right = '<span class="xrnone">' + (r.note || "无对应") + "</span>";
+    } else if (r.rel === "near") {
+      right = '<span class="xrnear">' + r.mpn + "·" + r.mf + "？</span>" +
+        '<a class="xrjump" href="' + xrLink(r) + '" target="_blank" rel="noopener" ' +
+        'title="坐标近邻存疑，仍可跳方舆查看">↗</a>';
+    } else {
+      right = "<span>" + r.mpn + " · " + (r.mn !== r.mf ? r.mf + "·" : "") + r.mn + "</span>" +
+        '<a class="xrjump" href="' + xrLink(r) + '" target="_blank" rel="noopener" ' +
+        'title="↗方舆经纬：' + r.mf + '">↗方舆</a>';
+    }
+    return '<div class="xrrow" data-z="' + r.z + '" data-rel="' + r.rel + '">' +
+      '<span class="xrz" title="' + (r.now ? "今" + r.now : "未定位") + '">' + r.z + "</span>" +
+      '<span class="xrtag t-' + r.rel + '">' + tag + "</span>" +
+      '<span class="xrev" title="' + (r.ev || r.note || "") + '">' +
+      (r.ev ? r.ev + (r.d != null ? "·" + r.d + "km" : "") : (r.note || "")) + "</span>" +
+      '<span class="xrr">' + right + "</span></div>";
+  }
+
+  function openXref() {
+    var X = HYXREF, st = X.stats;
+    vname.textContent = "明志对照 · 宋×明";
+    pmeta.innerHTML = "<span>宋 361 府州 ↔ 明 193 府</span><span>三重证据匹配</span><span>HHH 只读桥接</span>";
+    var html = '<div class="p-kicker">互查橋 · 總覽</div>';
+    html += '<div class="kv">宋府州 <b>' + st.song_zhou + "</b> → 得對應 <b>" + st.matched +
+      "</b>（同名 <b>" + st.same + "</b> · 宋州明升府 <b>" + st.promo + "</b> · 改名同城 <b>" +
+      st.rename + "</b> · 明為屬州 <b>" + st.mzhou + "</b>）· 近鄰存疑 <b>" + st.near +
+      "</b> · 無對應 <b>" + st.none + "</b>；明府 193 座中被反向對應 <b>" + st.ming_fu_hit + "</b> 座。</div>";
+    html += '<div class="quote"><span class="ql">匹配方法（tools/build_xref_fy.py 可重算）</span>' +
+      "名合（州名簡體化全同/去綴干支同）+ 治所今名對齊 + 兩站坐標近距 ≤32km 三重證據；" +
+      "僅名合者須道-省粗域相容（防同名異地）；純坐標近鄰不入確定計數、單列存疑。凡計數出自腳本。</div>";
+
+    /* 按道分组计数 */
+    html += '<div class="p-kicker" style="margin-top:12px">分道計數</div><div class="xrtable-wrap"><table class="xrtable"><thead><tr>' +
+      "<th>道</th><th>州</th><th>同名</th><th>升府</th><th>改名</th><th>明属州</th><th>疑</th><th>无</th></tr></thead><tbody>";
+    X.by_dao.forEach(function (d) {
+      html += "<tr><td>" + d.dao + "</td><td>" + d.total + "</td><td>" + d.same + "</td><td>" +
+        d.promo + "</td><td>" + d.rename + "</td><td>" + d.mzhou + "</td><td>" +
+        (d.near ? "<b>" + d.near + "</b>" : "0") + "</td><td>" + d.none + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+
+    /* 样例 */
+    html += '<div class="p-kicker" style="margin-top:14px">樣例 · 寰宇條目 × 方輿對應府</div>';
+    var picks = [], seen = {};
+    ["same", "promo", "rename", "mzhou", "near", "none"].forEach(function (rel) {
+      var got = 0;
+      X.rows.forEach(function (r) {
+        if (r.rel === rel && got < (rel === "none" ? 2 : 3) && !seen[r.z]) {
+          seen[r.z] = 1; got++; picks.push(r);
+        }
+      });
+    });
+    html += '<div class="xrsample">' + picks.map(xrRowHtml).join("") + "</div>";
+
+    /* 全表（筛选） */
+    html += '<div class="p-kicker" style="margin-top:14px">全表 ' + st.song_zhou + ' 行 · 點宋州名入本站州卡</div>';
+    html += '<div class="xrfilters">';
+    var cur = "all";
+    html += '<button class="xf on" data-f="all">全部 ' + st.song_zhou + "</button>";
+    ["same", "promo", "rename", "mzhou", "near", "none"].forEach(function (rel) {
+      html += '<button class="xf" data-f="' + rel + '">' + XR_REL[rel] + " " + st[rel] + "</button>";
+    });
+    html += "</div><div id=\"xrlist\">";
+    X.by_dao.forEach(function (d) {
+      var sub = X.rows.filter(function (r) { return r.dao === d.dao; });
+      html += '<div class="daohead">' + d.dao + '<span class="ct">' + sub.length + " 州</span></div>";
+      html += sub.map(xrRowHtml).join("");
+    });
+    html += "</div>";
+    html += '<div class="hint">↗ 深鏈約定<b>父目錄同根服務</b>：在 D:\\W_A_W 起 <code>python -m http.server</code> 後，' +
+      "/TPHY/ 與 /HHH/ 同源互達（相對路徑 ../HHH/）。方輿經緯為兄弟站，本站只讀其數據、絕不寫入。";
+
+    pbody.className = "";
+    pbody.innerHTML = html;
+    pbody.querySelectorAll(".xrrow .xrz").forEach(function (el) {
+      el.onclick = function () { HYAPP.openZhou(el.parentNode.dataset.z); };
+    });
+    pbody.querySelectorAll(".xf").forEach(function (b) {
+      b.onclick = function () {
+        pbody.querySelectorAll(".xf").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        var f = b.dataset.f;
+        pbody.querySelectorAll(".xrrow").forEach(function (row) {
+          if (!row.parentNode.classList.contains("xrsample")) {
+            row.style.display = (f === "all" || row.dataset.rel === f) ? "" : "none";
+          }
+        });
+        pbody.querySelectorAll(".daohead").forEach(function (h) { h.style.display = ""; });
+      };
+    });
+    show("對照");
+  }
+
   function openAbout() {
     vname.textContent = "关于 · 校勘记";
     pmeta.innerHTML = "<span>數據源流</span><span>存佚如實</span>";
@@ -146,9 +362,30 @@ var HYPANEL = (() => {
       "（1里≈0.55km，方法近似）· 其餘如實留白。</div>" +
       '<div class="p-kicker">校勘約定</div>' +
       '<div class="kv">底本「(闕)」為四庫本局部缺文注記，如實保留；異體字（關/闗、劍/劒/劔、潁/頴）歸併；' +
-      "粘連縣名不強拆——寧少勿假。</div>";
+      "粘連縣名不強拆——寧少勿假。</div>" +
+      '<div class="p-kicker">導出（與 tools/export_data.py 同口徑）</div>' +
+      '<div class="btnrow">' +
+      '<button class="abtn" id="exz">⤓ 府州 CSV</button>' +
+      '<button class="abtn" id="exx">⤓ 縣 CSV</button>' +
+      '<button class="abtn" id="exk">⤓ KML</button>' +
+      '<button class="abtn" id="exg">⤓ GeoJSON</button>' +
+      '<button class="abtn" id="exr">⤓ 宋明對照 CSV</button></div>' +
+      '<div class="hint">府州 361 行（含未定位標註與今地依據）· 縣 626 行（附郭=州治 / 三角化±20% 逐行註明）。' +
+      "命令行同款：<code>python tools/export_data.py</code> → docs/export/。</div>" +
+      '<div class="p-kicker">研究論文</div>' +
+      '<div class="btnrow"><a class="abtn solid" href="docs/寰宇经纬-数字人文.pdf" target="_blank" rel="noopener">📄 寰宇經緯-數字人文.pdf</a>' +
+      '<button class="abtn" id="goxref">☰ 明志對照</button></div>' +
+      '<div class="hint">論文 PDF 由 tools/build_paper_pdf.py 排印，數字全出自 stats.json；' +
+      "宋明互查橋見「對照」頁籤（../HHH/ 深鏈，父目錄同根服務）。</div>";
     pbody.className = "";
     pbody.innerHTML = html;
+    document.getElementById("exz").onclick = HYEXPORT.zhouCsv;
+    document.getElementById("exx").onclick = HYEXPORT.xianCsv;
+    document.getElementById("exk").onclick = HYEXPORT.kml;
+    document.getElementById("exg").onclick = HYEXPORT.geojson;
+    document.getElementById("exr").onclick = HYEXPORT.xrefCsv;
+    var gx = document.getElementById("goxref");
+    if (gx) gx.onclick = function () { HYAPP.setMode("duizhao"); };
     show("關於");
   }
 
@@ -166,6 +403,6 @@ var HYPANEL = (() => {
   }
 
   return { openDao: openDao, openZhou: openZhou, openXian: openXian, openAbout: openAbout,
-           show: show, hide: hide, get pbody() { return pbody; } };
+           openXref: openXref, show: show, hide: hide, get pbody() { return pbody; } };
 })();
 window.HYPANEL = HYPANEL;

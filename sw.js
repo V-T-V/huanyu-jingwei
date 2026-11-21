@@ -1,25 +1,26 @@
-/* 寰宇经纬 · Service Worker v1 —— 外壳预存 + 全文懒存 */
-const VERSION = "v1";
+/* 寰宇经纬 · Service Worker v2 —— 外壳预存 + 全文懒存 */
+const VERSION = "v2";
 const SHELL_FILES = [
   "./index.html",
-  "./css/main.css?v=1",
-  "./vendor/leaflet.js?v=1",
-  "./vendor/leaflet.css?v=1",
-  "./data/site_data.js?v=1",
-  "./js/config.js?v=1",
-  "./js/map.js?v=1",
-  "./js/rail.js?v=1",
-  "./js/panels.js?v=1",
-  "./js/reader.js?v=1",
-  "./js/search.js?v=1",
-  "./js/ftworker.js?v=1",
-  "./js/fulltext.js?v=1",
-  "./js/app.js?v=1",
+  "./css/main.css?v=2",
+  "./vendor/leaflet.js?v=2",
+  "./vendor/leaflet.css?v=2",
+  "./data/site_data.js?v=2",
+  "./data/xref_fy.js?v=2",
+  "./js/config.js?v=2",
+  "./js/map.js?v=2",
+  "./js/rail.js?v=2",
+  "./js/panels.js?v=2",
+  "./js/reader.js?v=2",
+  "./js/search.js?v=2",
+  "./js/ftworker.js?v=2",
+  "./js/fulltext.js?v=2",
+  "./js/app.js?v=2",
 ];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open("hy-shell-" + VERSION)
-    .then((c) => c.addAll(SHELL_FILES.map((f) => f.replace("?v=1", "?v=" + VERSION.slice(1))))
+    .then((c) => c.addAll(SHELL_FILES.map((f) => f.replace(/\?v=\d+/, "?v=" + VERSION.slice(1))))
     .catch(() => {})  // 个别资源失败不阻塞安装
     .then(() => self.skipWaiting()));
 });

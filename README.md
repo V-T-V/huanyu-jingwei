@@ -9,9 +9,14 @@ python -m http.server 9700
 # http://127.0.0.1:9700/index.html
 ```
 
+**互查桥深链约定（父目录同根服务）**：「↗方舆」深链用相对兄弟路径 `../HHH/`——
+在 `D:\W_A_W` 起 `python -m http.server` 后 `/TPHY/` 与 `/HHH/` 同源互达。
+方舆经纬为兄弟站，本站只读其数据（`tools/build_xref_fy.py`），**绝不写入**。
+
 深链（选中状态自动写回 URL，刷新/分享保持）：
 - `#mode=yutu&dao=jiangnanxi&zhou=洪州` —— 道 + 州详情（舆图模式）
 - `#mode=fen&read=henan` —— 分道而读（懒加载该道全文）
+- `#mode=duizhao` —— 明志对照（宋明府州互查桥）
 - `#search=開封府` —— 直达一次检索
 
 ## 全景
@@ -30,6 +35,9 @@ python -m http.server 9700
 - **检索**：顶栏检索州名·县名·道名（名录索引）；回车或点「🔍 全文」→ 按需加载全书
   818,819 字分片，Worker 纯数据扫描，命中卷片段预览，点击直达该道原文
 - **夜读** ☾ 墨色主题（localStorage 记忆）；**漫州** ⚑ 随机一州游历
+- **明志对照**（P2）：361 宋府州 ×《读史方舆纪要》明府/属州三重证据匹配（同名/升府/改名/明属州/存疑/无对应
+  如实分栏），按道计数 + 样例 + **↗方舆**深链；**导出** ⤓ 府州/县 CSV（BOM）· KML · GeoJSON ·
+  宋明对照 CSV（「关于」面板，与 `tools/export_data.py` 同口径）；研究论文 PDF 见 docs/
 
 ## 数据源与覆盖（如实）
 
@@ -57,6 +65,9 @@ build_data.py          # 段落化+状态机解析 → data/site_data.js + data/
                        #   十三道→府州(今理/沿革/栏目)→县(清单+方位里程) + 坐标整编(tools/coords.py)+三角化
 build_text.py          # 全文分道分片 → data/text/*.js（懒加载）+ manifest.json
 tools/build_stats.py   # 文本计量 → docs/stats.json（ANALYSIS.md 数字之源）
+tools/build_xref_fy.py # 宋明互查桥 → data/xref_fy.js（读 HHH site_data.js，只读不写）
+tools/export_data.py   # 古今对照导出 → docs/export/（CSV BOM/KML/GeoJSON，与前端按钮同口径）
+tools/build_paper_pdf.py # 论文排印 → docs/寰宇经纬-数字人文.pdf（lint 哨兵联动 md↔PDF）
 ```
 
 续抓演示：中断后重跑 `python tools/fetch_text.py` 自动跳过已存卷、只补缺失（本会话实抓中
@@ -66,25 +77,28 @@ tools/build_stats.py   # 文本计量 → docs/stats.json（ANALYSIS.md 数字�
 
 ```
 python -m http.server 9700 &
-python run_tests.py   # lint 122 项 + 数据断言 + 4 断言页(50+ 断言, VT+CDP 双协议)
+python run_tests.py   # lint 148 项 + 数据断言 + 4 断言页(60+ 断言, VT+CDP 双协议)
 ```
 
 禁用清单（lint 强制）：`map.fire("click")` · `innerHTML.indexOf()` 验证 · `window._闭包量` ·
 `git mv -q` · Worker 引 DOM · 核心模块硬引特性 DOM ID · `|| true` 兜底。
+P2 哨兵：ANALYSIS.md 改动未重排 PDF 即红 · xref/export 与 stats 总账不符即红。
 
 ## 结构
 
 ```
-index.html            # 入口（舆图/分道/关于三模式）
+index.html            # 入口（舆图/分道/对照/关于四模式）
+3d.html               # 三维形胜（州点圆径随县数 + ▶飛覽六形胜连飞）
 css/main.css          # 绢本设色体系
-js/                   # config → map → rail → panels → reader → search → ftworker → fulltext → app（defer 链）
+js/                   # config → map → rail → panels(含导出/对照) → reader → search → ftworker → fulltext → app（defer 链）
 data/site_data.js     # 结构化数据（build_data.py 生成，勿手改）
+data/xref_fy.js       # 宋明互查桥（build_xref_fy.py 生成，勿手改）
 data/text/*.js        # 十四分片全文（懒加载）
 data/coverage.json    # 侦察与覆盖结论（coverage.py 生成）
-tools/                # fetch/coverage/lint/build_stats + coords.py 坐标整编表
+tools/                # fetch/coverage/lint/build_stats/build_xref_fy/export_data/build_paper_pdf + coords.py
 tests/                # 4 断言页（VT dump-dom + CDP title 双协议）
 vendor/               # Leaflet（自 HHH 复制，同版本）
-docs/                 # ANALYSIS.md + stats.json + img/
+docs/                 # ANALYSIS.md + stats.json + 寰宇经纬-数字人文.pdf + export/ + img/
 ```
 
 ## 坐标纪律
@@ -94,5 +108,10 @@ docs/                 # ANALYSIS.md + stats.json + img/
 - 未定位州 106 个多为羁縻州/边州（岭南陇右为多），俟考
 
 ## 版本
+
+v0.2.0（2026-11-22）——P2 收官：论文 PDF（四库本删改与 8 卷原阙版本声明入文）、
+古今对照导出（CSV BOM/KML/GeoJSON + 宋明对照，前端按钮与 tools 同口径）、
+宋明府州互查桥（三重证据 361 州 → 对应 169/存疑 13/无 179，「对照」页签 + ↗方舆深链）、
+3D 州点圆径随县数 + ▶飛覽连飞；lint 148 项全绿。
 
 v0.1.0（2026-11-21）——首版：全书抓取解析、舆图、分道阅读、检索、计量。

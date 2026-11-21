@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>寰宇经纬 · 三维形胜</title>
-<link rel="stylesheet" href="vendor/maplibre-gl.css?v=1">
+<link rel="stylesheet" href="vendor/maplibre-gl.css?v=2">
 <style>
 :root { --paper:#efe6cf; --ink:#2b2416; --red:#b23a2e; --teal:#2f5d70; }
 * { box-sizing:border-box; margin:0; padding:0; }
@@ -37,16 +37,16 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
 <div id="map3d"></div>
 <div id="hud">
   <h1>寰宇經緯 · 三維形勝</h1>
-  <p>太平寰宇記 255 州治立于真山川（AWS 地形 · 夸张 1.35）。州点道色同 2D。点击州名开卡；「入 2D 详卷」深链返回。</p>
+  <p>太平寰宇記 255 州治立于真山川（AWS 地形 · 夸张 1.35）。州点道色同 2D，<b>圆径随属县数</b>（0—30 县渐大）。点击州名开卡；「▶ 飛覽」连飞六形胜。</p>
 </div>
 <a class="back" href="index.html">↩ 2D 輿圖</a>
 <div id="card"><h3 id="cn"></h3><div class="m" id="cm"></div><div class="x" id="cx"></div></div>
 <div id="hint">Ctrl+拖拽俯仰 · 右键旋转 · 滚轮缩放</div>
 <div id="views"></div>
 
-<script src="vendor/maplibre-gl.js?v=1"></script>
-<script src="data/site_data.js?v=1"></script>
-<script src="js/config.js?v=1"></script>
+<script src="vendor/maplibre-gl.js?v=2"></script>
+<script src="data/site_data.js?v=2"></script>
+<script src="js/config.js?v=2"></script>
 <script>
 (function () {
   if (typeof maplibregl === "undefined") {
@@ -81,12 +81,14 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
     map.addSource("hy", { type: "geojson", data: zhouGeo() });
     map.addLayer({
       id: "zhou-halo", type: "circle", source: "hy",
-      paint: { "circle-radius": 6.5, "circle-color": ["get", "color"],
+      paint: { "circle-radius": ["interpolate", ["linear"], ["get", "xct"], 0, 5, 10, 7, 30, 10],
+        "circle-color": ["get", "color"],
         "circle-opacity": .28, "circle-stroke-width": 1, "circle-stroke-color": ["get", "color"] },
     });
     map.addLayer({
       id: "zhou-dot", type: "circle", source: "hy",
-      paint: { "circle-radius": 3.2, "circle-color": ["get", "color"],
+      paint: { "circle-radius": ["interpolate", ["linear"], ["get", "xct"], 0, 2.6, 10, 3.4, 30, 4.6],
+        "circle-color": ["get", "color"],
         "circle-stroke-width": 1, "circle-stroke-color": "#f6efdc" },
     });
     try { map.setTerrain({ source: "terrain", exaggeration: 1.35 }); } catch (e) {}
@@ -106,6 +108,7 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
       return { type: "Feature",
         geometry: { type: "Point", coordinates: [z.c[1], z.c[0]] },
         properties: { n: z.n, dao: z.dao, now: z.now || "", vols: String(z.vols[0]),
+          xct: (z.xian || []).length,
           yz: z.yz || "", color: DAOCOLORS[(HY.daos.find(function (d) { return d.name === z.dao; }) || {}).id] || "#8b8069" } };
     });
     return { type: "FeatureCollection", features: feats };
@@ -125,12 +128,38 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
     var b = document.createElement("button");
     b.textContent = v[0];
     b.onclick = function () {
+      stopFly();
       document.querySelectorAll("#views button").forEach(function (x) { x.classList.remove("on"); });
       b.classList.add("on");
       map.flyTo({ center: v[1], zoom: v[2], pitch: v[3], bearing: v[4], duration: 2.6 });
     };
     host.appendChild(b);
   });
+
+  /* 飛覽：六形勝連飛（P2-D） */
+  var flyTimer = null, flyBtn = document.createElement("button");
+  flyBtn.textContent = "▶ 飛覽";
+  flyBtn.title = "自西而東連飛六處形勝，再點止";
+  function stopFly() {
+    if (flyTimer) { clearInterval(flyTimer); flyTimer = null; flyBtn.classList.remove("on"); flyBtn.textContent = "▶ 飛覽"; }
+  }
+  flyBtn.onclick = function () {
+    if (flyTimer) { stopFly(); return; }
+    flyBtn.classList.add("on"); flyBtn.textContent = "■ 止飛";
+    document.querySelectorAll("#views button").forEach(function (x) { x.classList.remove("on"); });
+    var i = 0;
+    var step = function () {
+      var v = VIEWS[i % VIEWS.length];
+      document.querySelectorAll("#views button:not(.fly)").forEach(function (x) { x.classList.remove("on"); });
+      if (host.children[i % VIEWS.length]) host.children[i % VIEWS.length].classList.add("on");
+      map.flyTo({ center: v[1], zoom: v[2], pitch: v[3], bearing: v[4], duration: 4.2, essential: true });
+      i++;
+    };
+    step();
+    flyTimer = setInterval(step, 7000);
+  };
+  flyBtn.className = "fly";
+  host.appendChild(flyBtn);
 })();
 </script>
 </body>

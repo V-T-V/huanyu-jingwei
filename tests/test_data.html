@@ -3,8 +3,9 @@
 <head><meta charset="UTF-8"><title>test_data</title></head>
 <body>
 <div id="testlog">TESTLOG</div>
-<script src="../data/site_data.js?v=1"></script>
-<script src="../js/config.js?v=1"></script>
+<script src="../data/site_data.js?v=2"></script>
+<script src="../data/xref_fy.js?v=2"></script>
+<script src="../js/config.js?v=2"></script>
 <script>
 (function () {
   var L = [];
@@ -42,6 +43,26 @@
   A("每个州有道名", HY.zhou.every(function (z) { return z.dao; }));
   var noC = HY.zhou.filter(function (z) { return !z.c; }).length;
   A("未定位州如实计数 > 0", noC === HY.stats.zhou_count - HY.stats.zhou_coord);
+  /* ── 宋明互查桥 ── */
+  A("HYXREF 存在", typeof HYXREF === "object" && !!HYXREF.stats);
+  var st = HYXREF.stats;
+  A("桥总数 = 州数", st.song_zhou === HY.stats.zhou_count);
+  A("桥总账自洽", st.matched + st.near + st.none === st.song_zhou);
+  A("桥分档自洽", st.matched === st.same + st.promo + st.rename + st.mzhou);
+  A("桥行数一致", HYXREF.rows.length === st.song_zhou);
+  var kf2 = HYXREF.rows.find(function (r) { return r.z === "開封府"; });
+  A("開封府→明开封府(同名)", kf2 && kf2.rel === "same" && kf2.mf === "开封府" && kf2.mp === "henan");
+  var hz = HYXREF.rows.find(function (r) { return r.z === "洪州"; });
+  A("洪州→明南昌府(改名)", hz && hz.rel === "rename" && hz.mf === "南昌府");
+  var yz = HYXREF.rows.find(function (r) { return r.z === "渝州"; });
+  A("渝州→明重庆府(改名)", yz && yz.rel === "rename" && yz.mf === "重庆府");
+  var qz = HYXREF.rows.find(function (r) { return r.z === "蘇州"; });
+  A("蘇州→明苏州府(升府)", qz && qz.rel === "promo" && qz.mf === "苏州府");
+  A("深链基址 ../HHH/", HYXREF.link.indexOf("../HHH/") === 0);
+  A("分道计数含 13 道", HYXREF.by_dao.length === 13);
+  var rels = {};
+  HYXREF.rows.forEach(function (r) { rels[r.rel] = (rels[r.rel] || 0) + 1; });
+  A("分档遍历与 stats 一致", rels.none === st.none && rels.near === st.near && rels.rename === st.rename);
   document.getElementById("testlog").textContent = "TESTLOG\n" + L.join("\n") + "\nENDLOG";
 })();
 </script>

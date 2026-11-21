@@ -11,11 +11,15 @@
   7  深链语法      app.js 含 #dao=/#zhou=/#mode= 写回
   8  覆盖如实      coverage.json 阙卷 = [4,113-119] · 缺卷=0
   9  数据-覆盖一致  site_data.js vols_got 与 coverage.json 一致
+ 10  论文同步      ANALYSIS.md 改动而 PDF 未重排即红（md 新于 PDF → 跑 tools/build_paper_pdf.py）
+ 11  互查桥哨兵    data/xref_fy.js 存在可解析 · 总数=州数 · 分档计数自洽 · 深链格式
+ 12  导出哨兵      docs/export 五件存在 · 行数与 stats 一致 · CSV 带 BOM
 """
 import json
 import os
 import re
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 fails, checks = [], 0
@@ -101,6 +105,12 @@ def main():
         for pat, why in banned:
             ok(not re.search(pat, t), f"{f} 触禁：{why}")
 
+    # ── 5b JS 语法（node --check，静默失败即红）──
+    import subprocess
+    for f in ["js/" + x for x in sorted(os.listdir(os.path.join(ROOT, "js"))) if x.endswith(".js")]:
+        r2 = subprocess.run(["node", "--check", os.path.join(ROOT, f)], capture_output=True, timeout=20)
+        ok(r2.returncode == 0, f"{f} 语法错误：{r2.stderr.decode('utf-8', 'replace')[:160]}")
+
     # ── 6 Worker 纯净 ──
     w = read("js/ftworker.js")
     ok("document" not in w, "ftworker.js 引用 document")
@@ -121,6 +131,67 @@ def main():
     # ── 9 数据-覆盖一致 ──
     ok(cov["got_vols"] == s["vols_got"], "site_data 与 coverage 实卷数不一致")
     ok(abs(cov["total_chars"] - s["total_chars"]) < 5000, "site_data 与 coverage 字数不一致")
+
+    # ── 10 论文同步（md 改了 PDF 忘排即红）──
+    pdf_path = os.path.join(ROOT, "docs", "寰宇经纬-数字人文.pdf")
+    md_path = os.path.join(ROOT, "docs", "ANALYSIS.md")
+    ok(os.path.exists(pdf_path), "docs/寰宇经纬-数字人文.pdf 不存在（跑 tools/build_paper_pdf.py）")
+    if os.path.exists(pdf_path):
+        ok(os.path.getmtime(md_path) <= os.path.getmtime(pdf_path) + 60,
+           "ANALYSIS.md 新于论文 PDF——重跑 python tools/build_paper_pdf.py（改于 %s）"
+           % time.strftime("%H:%M:%S", time.localtime(os.path.getmtime(md_path))))
+
+    # ── 11 互查桥哨兵 ──
+    xr_path = os.path.join(ROOT, "data", "xref_fy.js")
+    ok(os.path.exists(xr_path), "data/xref_fy.js 不存在（跑 tools/build_xref_fy.py）")
+    xr = None
+    if os.path.exists(xr_path):
+        xt = open(xr_path, encoding="utf-8").read()
+        k = xt.find("const HYXREF = ")
+        ok(k >= 0, "xref_fy.js 缺 const HYXREF")
+        try:
+            xr = json.loads(xt[k + len("const HYXREF = "):].rstrip().rstrip(";"))
+        except Exception as e:
+            ok(False, "xref_fy.js 解析失败: %s" % e)
+    if xr:
+        xs = xr["stats"]
+        ok(xs["song_zhou"] == s["zhou_count"], "桥总数 %s ≠ 州数 %s" % (xs["song_zhou"], s["zhou_count"]))
+        ok(xs["matched"] == xs["same"] + xs["promo"] + xs["rename"] + xs["mzhou"], "桥分档不自洽")
+        ok(xs["matched"] + xs["near"] + xs["none"] == xs["song_zhou"], "桥总账不自洽")
+        ok(len(xr["rows"]) == xs["song_zhou"], "桥行数 %d ≠ %d" % (len(xr["rows"]), xs["song_zhou"]))
+        rels = {r["rel"] for r in xr["rows"]}
+        ok(rels <= {"same", "promo", "rename", "mzhou", "near", "none"}, "桥出现未定义 rel: %s" % rels)
+        ok(all(r["z"] and r["dao"] for r in xr["rows"]), "桥行缺州名/道名")
+        ok(all(r["mp"] and r["mf"] for r in xr["rows"] if r["rel"] not in ("none",)), "匹配行缺深链字段")
+        ok("../HHH/" in xr.get("link", ""), "桥深链基址异常")
+        idx_html = read("index.html")
+        ok("data/xref_fy.js" in idx_html, "index.html 未引入 data/xref_fy.js")
+
+    # ── 12 导出哨兵 ──
+    ex = os.path.join(ROOT, "docs", "export")
+    for f in ("寰宇经纬-府州对照.csv", "寰宇经纬-县对照.csv", "寰宇经纬-州县点位.kml",
+              "寰宇经纬-州县点位.geojson", "寰宇经纬-宋明对照.csv"):
+        ok(os.path.exists(os.path.join(ex, f)), "docs/export 缺 %s（跑 tools/export_data.py）" % f)
+    zc = os.path.join(ex, "寰宇经纬-府州对照.csv")
+    xc = os.path.join(ex, "寰宇经纬-县对照.csv")
+    rc = os.path.join(ex, "寰宇经纬-宋明对照.csv")
+    if os.path.exists(zc):
+        raw = open(zc, "rb").read()
+        ok(raw[:3] == b"\xef\xbb\xbf", "府州 CSV 缺 BOM")
+        ok(raw.decode("utf-8-sig").count("\n") == s["zhou_count"], "府州 CSV 行数 ≠ %s" % s["zhou_count"])
+    if os.path.exists(xc):
+        raw = open(xc, "rb").read()
+        ok(raw[:3] == b"\xef\xbb\xbf", "县 CSV 缺 BOM")
+        ok(raw.decode("utf-8-sig").count("\n") == s["xian_coord"], "县 CSV 行数 ≠ %s" % s["xian_coord"])
+    if os.path.exists(rc):
+        raw = open(rc, "rb").read()
+        ok(raw[:3] == b"\xef\xbb\xbf", "宋明对照 CSV 缺 BOM")
+        ok(raw.decode("utf-8-sig").count("\n") == s["zhou_count"], "宋明对照 CSV 行数 ≠ 州数")
+    gj = os.path.join(ex, "寰宇经纬-州县点位.geojson")
+    if os.path.exists(gj):
+        g = json.load(open(gj, encoding="utf-8"))
+        ok(len(g["features"]) == s["zhou_coord"] + s["xian_coord"],
+           "GeoJSON 要素 %d ≠ 州点+县点 %d" % (len(g["features"]), s["zhou_coord"] + s["xian_coord"]))
 
     print(f"lint：{checks} 项检查")
     if fails:
