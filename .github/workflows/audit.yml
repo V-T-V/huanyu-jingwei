@@ -32,3 +32,11 @@ jobs:
           HY_BROWSER: /usr/bin/google-chrome
           HY_BASE: http://127.0.0.1:9700/
         run: python run_tests.py
+      - name: 离线三验 offline_check（SW 在位 · 断网重载 · 数据层离线可得）
+        # 现状会红：sw.js 在库但 index.html 从未注册（git 全史无 registration）。
+        # 按教训 20 不吞错——红即信号，补注册（约 3 行，学 YHJZ 模式）后自动转绿
+        # （sw.js v6 已修好并实验室实证：注入注册后三验全绿，见 docs/evidence/offline-index-lab.png）
+        env:
+          HY_BROWSER: /usr/bin/google-chrome
+          HY_BASE: http://127.0.0.1:9700/
+        run: python tools/offline_check.py

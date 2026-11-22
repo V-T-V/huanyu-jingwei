@@ -1,29 +1,29 @@
 /* 寰宇经纬 · Service Worker v2 —— 外壳预存 + 全文懒存 */
-const VERSION = "v5";
+const VERSION = "v6";
 const SHELL_FILES = [
-  "./index.html",
-  "./css/main.css?v=5",
-  "./vendor/leaflet.js?v=5",
-  "./vendor/leaflet.css?v=5",
-  "./data/site_data.js?v=5",
-  "./data/xref_fy.js?v=5",
-  "./data/xrev_yh.js?v=5",
-  "./js/config.js?v=5",
-  "./js/map.js?v=5",
-  "./js/rail.js?v=5",
-  "./js/panels.js?v=5",
-  "./js/reader.js?v=5",
-  "./js/search.js?v=5",
-  "./js/ftworker.js?v=5",
-  "./js/fulltext.js?v=5",
-  "./js/app.js?v=5",
+  "./", "./index.html", "./manifest.json",
+  "./css/main.css?v=6",
+  "./vendor/leaflet.js?v=6",
+  "./vendor/leaflet.css?v=6",
+  "./data/site_data.js?v=6",
+  "./data/xref_fy.js?v=6",
+  "./data/xrev_yh.js?v=6",
+  "./js/config.js?v=6",
+  "./js/map.js?v=6",
+  "./js/rail.js?v=6",
+  "./js/panels.js?v=6",
+  "./js/reader.js?v=6",
+  "./js/search.js?v=6",
+  "./js/ftworker.js?v=6",
+  "./js/fulltext.js?v=6",
+  "./js/app.js?v=6",
 ];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open("hy-shell-" + VERSION)
     .then((c) => c.addAll(SHELL_FILES.map((f) => f.replace(/\?v=\d+/, "?v=" + VERSION.slice(1))))
     .catch(() => {})  // 个别资源失败不阻塞安装
-    .then(() => self.skipWaiting()));
+    .then(() => self.skipWaiting())));
 });
 
 self.addEventListener("activate", (e) => {
@@ -33,17 +33,9 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  const url = e.request.url;
-  if (url.includes("data/text/") || url.endsWith(".js") && url.includes("/js/")) {
-    /* 全文分片与模块: 网络优先回退缓存（懒存） */
-    e.respondWith(fetch(e.request).then((r) => {
-      const cp = r.clone();
-      caches.open("hy-text").then((c) => c.put(e.request, cp));
-      return r;
-    }).catch(() => caches.match(e.request)));
-    return;
-  }
-  if (url.includes("arcgisonline.com")) {
+  if (e.request.method !== "GET") return;
+  const url = new URL(e.request.url);
+  if (url.href.includes("arcgisonline.com")) {
     /* 瓦片: stale-while-revalidate, 限额防膨胀 */
     e.respondWith(caches.open("hy-tiles").then((c) =>
       c.match(e.request).then((hit) => {
@@ -57,5 +49,15 @@ self.addEventListener("fetch", (e) => {
   }
   if (e.request.mode === "navigate") {
     e.respondWith(fetch(e.request).catch(() => caches.match("./index.html")));
+    return;
   }
+  if (url.origin !== self.location.origin) return;
+  /* 同源资源：网络优先防钉旧版，成功回填（全文分片→hy-text 懒存 · 其余→外壳），
+     离线回缓存——css/site_data/xref/vendor 此前无分支，断网即断供（离线三验实证） */
+  const isText = url.pathname.includes("/data/text/");
+  e.respondWith(fetch(e.request).then((r) => {
+    const cp = r.clone();
+    caches.open(isText ? "hy-text" : "hy-shell-" + VERSION).then((c) => c.put(e.request, cp));
+    return r;
+  }).catch(() => caches.match(e.request)));
 });
