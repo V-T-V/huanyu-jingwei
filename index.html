@@ -83,5 +83,12 @@
 <script src="data/xref_fy.js?v=6" defer></script>
 <script src="data/xrev_yh.js?v=6" defer></script>
 <script src="js/app.js?v=6" defer></script>
+<script>
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
 </body>
 </html>
