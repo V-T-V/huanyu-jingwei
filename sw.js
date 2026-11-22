@@ -1,22 +1,24 @@
 /* 寰宇经纬 · Service Worker v2 —— 外壳预存 + 全文懒存 */
-const VERSION = "v6";
+const VERSION = "v7";
 const SHELL_FILES = [
-  "./", "./index.html", "./manifest.json",
-  "./css/main.css?v=6",
-  "./vendor/leaflet.js?v=6",
-  "./vendor/leaflet.css?v=6",
-  "./data/site_data.js?v=6",
-  "./data/xref_fy.js?v=6",
-  "./data/xrev_yh.js?v=6",
-  "./js/config.js?v=6",
-  "./js/map.js?v=6",
-  "./js/rail.js?v=6",
-  "./js/panels.js?v=6",
-  "./js/reader.js?v=6",
-  "./js/search.js?v=6",
-  "./js/ftworker.js?v=6",
-  "./js/fulltext.js?v=6",
-  "./js/app.js?v=6",
+  "./", "./index.html", "./3d.html", "./manifest.json",
+  "./css/main.css?v=7",
+  "./vendor/leaflet.js?v=7",
+  "./vendor/leaflet.css?v=7",
+  "./vendor/maplibre-gl.js?v=7",
+  "./vendor/maplibre-gl.css?v=7",
+  "./data/site_data.js?v=7",
+  "./data/xref_fy.js?v=7",
+  "./data/xrev_yh.js?v=7",
+  "./js/config.js?v=7",
+  "./js/map.js?v=7",
+  "./js/rail.js?v=7",
+  "./js/panels.js?v=7",
+  "./js/reader.js?v=7",
+  "./js/search.js?v=7",
+  "./js/ftworker.js?v=7",
+  "./js/fulltext.js?v=7",
+  "./js/app.js?v=7",
 ];
 
 self.addEventListener("install", (e) => {
@@ -48,7 +50,9 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   if (e.request.mode === "navigate") {
-    e.respondWith(fetch(e.request).catch(() => caches.match("./index.html")));
+    /* 离线先回本页缓存（3d.html 离线得 3d，不调包成首页）再回外壳 */
+    e.respondWith(fetch(e.request)
+      .catch(() => caches.match(e.request).then((r) => r || caches.match("./index.html"))));
     return;
   }
   if (url.origin !== self.location.origin) return;

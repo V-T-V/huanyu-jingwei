@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>寰宇经纬 · 三维形胜</title>
-<link rel="stylesheet" href="vendor/maplibre-gl.css?v=6">
+<link rel="stylesheet" href="vendor/maplibre-gl.css?v=7">
 <style>
 :root { --paper:#efe6cf; --ink:#2b2416; --red:#b23a2e; --teal:#2f5d70; }
 * { box-sizing:border-box; margin:0; padding:0; }
@@ -48,9 +48,9 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
 <div id="hint">Ctrl+拖拽俯仰 · 右键旋转 · 滚轮缩放</div>
 <div id="views"></div>
 
-<script src="vendor/maplibre-gl.js?v=6"></script>
-<script src="data/site_data.js?v=6"></script>
-<script src="js/config.js?v=6"></script>
+<script src="vendor/maplibre-gl.js?v=7"></script>
+<script src="data/site_data.js?v=7"></script>
+<script src="js/config.js?v=7"></script>
 <script>
 (function () {
   if (typeof maplibregl === "undefined") {
@@ -73,7 +73,7 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
       layers: [
         { id: "bg", type: "background", paint: { "background-color": "#dcd2b4" } },
         { id: "sat", type: "raster", source: "sat", paint: { "raster-opacity": .82,
-          "raster-saturation": -0.35, "raster-brightness-max": 1.05 } },
+          "raster-saturation": -0.35, "raster-brightness-max": 1 } },
       ],
     },
     center: [108.5, 34.5], zoom: 3.6, pitch: 52, bearing: -18,
@@ -81,7 +81,12 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
     maxBounds: [[85, 15], [135, 47]],
   });
   map.on("error", function (e) { /* 高程/字体不可达则自动降级 */ });
-  map.on("load", function () {
+  /* 图层初始化双路：load 事件 + 6.5s 超时兜底——离线时远端瓦片全败 load 永不触发，
+     州点/文柱全挂 load 则离线仅空 canvas（3D 离线补全实测教训）；幂等旗标 */
+  var _booted = false;
+  var boot3 = function () {
+    if (_booted) return;
+    _booted = true;
     map.addSource("hy", { type: "geojson", data: zhouGeo() });
     map.addLayer({
       id: "zhou-halo", type: "circle", source: "hy",
@@ -126,7 +131,9 @@ a.back { position:absolute; top:14px; right:280px; z-index:11; color:var(--teal)
       map.on("mouseenter", lid, function () { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", lid, function () { map.getCanvas().style.cursor = ""; });
     });
-  });
+  };
+  map.on("load", boot3);
+  setTimeout(function () { if (!_booted && map.isStyleLoaded()) boot3(); }, 6500);
 
   var YT_MIN = 2500;   /* 文柱门槛：条目文量字数（55 大州，数据实测） */
   function ring(lng, lat, r) {
